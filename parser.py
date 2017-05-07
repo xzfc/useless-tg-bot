@@ -1,4 +1,5 @@
 from telegram import Message, MessageEntity
+import cgi
 
 class MyMessageEntity:
     def __init__(self, type, text, url=None, user=None):
@@ -6,6 +7,8 @@ class MyMessageEntity:
         self.text = text
         self.url = url
         self.user = user
+    def duplicate(self):
+        return MyMessageEntity(self.type, self.text, self.url, self.user)
     def __str__(self):
         return "«%s» (%s)" % (self.text, self.type)
     PLAIN = 'plain'
@@ -44,3 +47,20 @@ def serialize(entities):
                 user = entity.user))
         pos += length
     return result_text, result_entities
+
+def serialize_to_html(entities):
+    result = []
+    for entity in entities:
+        text = cgi.escape(entity.text)
+        if entity.type == MessageEntity.TEXT_LINK:
+            text = '<a href="{}">{}</a>'.format(entity.url, text)
+        elif entity.type == MessageEntity.BOLD:
+            text = '<b>{}</b>'.format(text)
+        elif entity.type == MessageEntity.ITALIC:
+            text = '<i>{}</i>'.format(text)
+        elif entity.type == MessageEntity.CODE:
+            text = '<code>{}</code>'.format(text)
+        elif entity.type == MessageEntity.PRE:
+            text = '<pre>{}</pre>'.format(text)
+        result.append(text)
+    return "".join(text)
