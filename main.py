@@ -7,7 +7,7 @@ import sqlite3
 
 class Bot:
     def __init__(self):
-        self.db = sqlite3.connect('example.db', check_same_thread = False)
+        self.db = sqlite3.connect(sys.argv[2], check_same_thread = False)
         self.updater = Updater(sys.argv[1])
         self.plugins = {}
 

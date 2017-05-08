@@ -1,8 +1,23 @@
 import parser
 
-def strip_prefix(message, prefix):
-    if message[0].text.startswith(prefix):
-        message[0].text = message[0].text[len(prefix):]
+PREFIXES = [" — ", " -- "]
+
+def is_mention(entity):
+    return entity.type in ['mention', 'text_mention']
+
+def is_and(entity):
+    return entity.type in ['plain'] and \
+           entity.text.strip() == 'и'
+
+def starts_with_prefix(entity):
+    return entity.type in ['plain'] and \
+           any(map(entity.text.startswith, PREFIXES))
+
+def get_text(message):
+    for prefix in PREFIXES:
+        if message[0].text.startswith(prefix):
+            message[0].text = message[0].text[len(prefix):]
+            break
     return parser.serialize_to_html(message)
 
 def parse(get_id, update):
@@ -14,21 +29,21 @@ def parse(get_id, update):
 
     # <mention> " — " {text}
     if len(message) >= 2 and \
-       message[0].type in ['mention', 'text_mention'] and \
-       message[1].type == 'plain' and message[1].text.startswith(" — "):
+       is_mention(message[0]) and \
+       starts_with_prefix(message[1]):
         mode = 'add'
         subjs = [get_id(message[0])]
-        text = strip_prefix(message[1:], " — ")
+        text = get_text(message[1:])
 
     # <mention> " and " <mention> " — " {text}
     if len(message) >= 4 and \
-       message[0].type in ['mention', 'text_mention'] and \
-       message[1].type in ['plain'] and message[1].text.strip() == "и" and \
-       message[2].type in ['mention', 'text_mention'] and \
-       message[3].type in ['plain'] and message[3].text.startswith(" — "):
+       is_mention(message[0]) and \
+       is_and(message[1]) and \
+       is_mention(message[2]) and \
+       starts_with_prefix(message[3]):
         mode = 'add'
         subjs = [get_id(message[0]), get_id(message[2])]
-        text = strip_prefix(message[3:], " — ")
+        text = get_text(message[3:])
 
     if subjs is not None:
         return (chat_id, author_uid, subjs, text)

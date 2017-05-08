@@ -32,7 +32,7 @@ class Base:
                        subj2_uid INTEGER,
 
                        PRIMARY KEY (chat_id, author_uid,
-                                    subj0_uid, subj1_uid, subj1_uid)
+                                    subj0_uid, subj1_uid, subj2_uid)
                        )''')
         self.conn.commit()
 
@@ -80,8 +80,10 @@ class Base:
         c = self.conn.cursor()
         subj_uids = sorted(subj_uids) + [0] * (3 - len(subj_uids))
         c.execute('''SELECT * from `opinion`
-                     WHERE chat_id = ? AND author_uid = ?''',
-                  (chat_id, author_uid))
+                     WHERE chat_id = ? AND author_uid = ? AND
+                     `subj0_uid` = ? AND `subj1_uid` = ? AND `subj2_uid` = ?
+                     ''',
+                  [chat_id, author_uid] + subj_uids)
         old = c.fetchone()
         if old:
             old = Entry.make(*old)
