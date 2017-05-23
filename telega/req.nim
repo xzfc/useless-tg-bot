@@ -55,12 +55,17 @@ proc getMe*(this : Telega) : Future[User] {.async.} =
   return reply.getResult.parseUser
 
 proc getUpdates*(this: Telega,
+                 logFile: File = nil,
                  timeout: int = 10) : Future[seq[Update]] {.async.} =
   var form = newMultiPartData()
   form["offset"] = $this.update_id
   form["timeout"] = $timeout
   let reply = await telegramMethod(this, "getUpdates", form)
   if reply.ok:
+    if not logFile.isNil:
+      for item in reply.result.items:
+        logFile.write($item & "\n")
+      logFile.flushFile()
     let parsedReply = reply.result.parseUpdates
     for update in parsedReply:
       this.update_id = update.update_id+1
