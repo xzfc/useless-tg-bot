@@ -16,6 +16,9 @@ type
     user     *: User
     asAuthor *: uint
     asSubj   *: uint
+  MarkovNextRow* = object
+    word  *: string
+    count *: uint
 
 proc allRows(db: DbConn, query: SqlQuery,
              args: varargs[DbValue, dbValue]) : seq[Row] =
@@ -63,6 +66,10 @@ proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.asAuthor = r[4].parseUint
   result.asSubj   = r[5].parseUint
 
+proc getMarkovNextRow(r: Row): MarkovNextRow =
+  result.word  = if r[0].len == 0: nil else: r[0]
+  result.count = r[1].parseUint
+
 proc init*(db : DbConn) =
   db.execEx sql"""
     CREATE TABLE IF NOT EXISTS users (
@@ -85,6 +92,14 @@ proc init*(db : DbConn) =
       subj_uid   INTEGER,
       text       TEXT,
       PRIMARY KEY (chat_id, author_uid, subj_uid)
+    )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS markov (
+      chat_id    INTEGER,
+      word_from  TEXT,
+      word_to    TEXT,
+      count      INTEGER,
+      PRIMARY KEY (chat_id, word_from, word_to)
     )"""
 
 proc rememberUser*(db: DbConn, user: User) =
@@ -203,3 +218,30 @@ proc searchOpinion*(db: DbConn, chatId: int64,
      LIMIT 1
   """
   return db.optionalRow(query, chatId, authorUid, subjUid).map(getOpinionRow)
+
+
+proc rememberMarkov*(db: DbConn, chatId: int64, wordFrom, wordTo: string) =
+  const query1 = sql"""
+    INSERT OR IGNORE
+      INTO markov
+    VALUES (?, ?, ?, 0)
+  """
+  const query2 = sql"""
+    UPDATE markov
+       SET count = count + 1
+     WHERE chat_id = ?
+       AND word_from = ?
+       AND word_to = ?
+  """
+  db.execEx(query1, chatId, wordFrom, wordTo)
+  db.execEx(query2, chatId, wordFrom, wordTo)
+
+proc markovGetNext*(db: DbConn, chatId: int64, wordFrom: string
+                   ): seq[MarkovNextRow] =
+  const query = sql"""
+    SELECT word_to, count
+      FROM markov
+     WHERE chat_id = ?
+       AND word_from = ?
+  """
+  db.allRows(query, chatId, wordFrom).map(getMarkovNextRow)
