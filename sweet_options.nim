@@ -19,11 +19,17 @@ template `?:`*[T](val: Option[T], default: T): T =
   # Elvis operator.
   val.get(default)
 
+proc valueExists*[T](x: Option[T]): bool = x.isSome
+proc valueExists*[T](x: ref T):     bool = x != nil
+
+proc getValue*[T](x: Option[T]): T = x.get
+proc getValue*[T](x: ref T):     T = x[]
+
 proc optionMatch(EXPR, IDENT, BODY, ELSE_BODY: NimNode): NimNode =
   let v = genSym()
   let ifStmt = newIfStmt(
-      (newDotExpr(v, newIdentNode "isSome"),
-       newStmtList(newLetStmt(IDENT, newDotExpr(v, newIdentNode "get")),
+      (newDotExpr(v, newIdentNode "valueExists"),
+       newStmtList(newLetStmt(IDENT, newDotExpr(v, newIdentNode "getValue")),
                    BODY)))
   if not ELSE_BODY.isNil:
     ifStmt.add ELSE_BODY
@@ -38,11 +44,11 @@ macro `?->`*(EXPR, IDENT, BODY, ELSE_BODY: untyped): untyped =
   # Expands to:
   #
   #   let :v = EXPR
-  #   if :v.isSome:
-  #     let IDENT = v.get
+  #   if :v.valueExists:
+  #     let IDENT = v.getValue
   #     BODY
   #
-  # Where EXPR have type Option[T] and IDENT have type T.
+  # Where EXPR have type Option[T] or ref T and IDENT have type T.
 
   assert IDENT.kind == nnkIdent
   assert BODY.kind == nnkStmtList
@@ -60,13 +66,13 @@ macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
   # Expands to:
   #
   #   let :v = EXPR
-  #   if :v.isSome:
-  #     let IDENT = v.get
+  #   if :v.valueExists:
+  #     let IDENT = v.getValue
   #     BODY
   #   else:
   #     ELSE_BODY
   #
-  # Where EXPR have type Option[T] and IDENT have type T.
+  # Where EXPR have type Option[T] or ref T and IDENT have type T.
 
   assert IDENT.kind == nnkIdent
   assert BODY.kind == nnkStmtList
