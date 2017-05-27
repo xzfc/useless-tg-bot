@@ -1,9 +1,10 @@
+import ./db_sqlite_extras
 import db_sqlite
-import sequtils
 import options
+import sequtils
 import strutils
-import telega/types
 import telega/html
+import telega/types
 
 type
   OpinionRow* = object
@@ -17,11 +18,11 @@ type
     asSubj   *: uint
 
 proc allRows(db: DbConn, query: SqlQuery,
-             args : varargs[string, `$`]) : seq[Row] =
-  return toSeq(db.fastRows(query, args))
+             args: varargs[DbValue, dbValue]) : seq[Row] =
+  return toSeq(db.fastRowsEx(query, args))
 
-proc optionalRow(db : DbConn, query : SqlQuery,
-      args : varargs[string, `$`]) : Option[Row] =
+proc optionalRow(db: DbConn, query : SqlQuery,
+      args : varargs[DbValue, dbValue]) : Option[Row] =
   let a = db.allRows(query, args)
   if a.len() == 0:
     return none(Row)
@@ -63,7 +64,7 @@ proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.asSubj   = r[5].parseUint
 
 proc init*(db : DbConn) =
-  db.exec sql"""
+  db.execEx sql"""
     CREATE TABLE IF NOT EXISTS users (
       uid        INTEGER,
       first      TEXT,
@@ -71,13 +72,13 @@ proc init*(db : DbConn) =
       uname      TEXT COLLATE NOCASE,
       PRIMARY KEY (uid)
     )"""
-  db.exec sql"""
+  db.execEx sql"""
     CREATE TABLE IF NOT EXISTS chat_history (
       chat_id    INTEGER,
       author_uid INTEGER,
       text       TEXT
     )"""
-  db.exec sql"""
+  db.execEx sql"""
     CREATE TABLE IF NOT EXISTS opinions (
       chat_id    INTEGER,
       author_uid INTEGER,
@@ -88,21 +89,21 @@ proc init*(db : DbConn) =
 
 proc rememberUser*(db: DbConn, user: User) =
   if user.username.isSome:
-    db.exec sql"""
-              UPDATE users
-                 SET uname = NULL
-               WHERE uname == ?
+    db.execEx sql"""
+                UPDATE users
+                   SET uname = NULL
+                 WHERE uname == ?
+              """,
+              user.username.get
+  db.execEx sql"""
+              INSERT OR REPLACE
+                INTO users
+              VALUES (?, ?, ?, ?)
             """,
-            user.username.get
-  db.exec sql"""
-            INSERT OR REPLACE
-              INTO users
-            VALUES (?, ?, ?, ?)
-          """,
-          user.id,
-          user.first_name,
-          user.last_name.getNil,
-          user.username.getNil
+            user.id,
+            user.first_name,
+            user.last_name.getNil,
+            user.username.getNil
 
 proc searchUserByUid*(db: DbConn, uid: int32): Option[User] =
   let query = sql"""
@@ -177,7 +178,7 @@ proc rememberOpinion*(db: DbConn, chatId: int64,
     INSERT OR REPLACE INTO opinions
     VALUES (?, ?, ?, ?)
   """
-  db.exec(query, chatId, authorUid, subjUid, text)
+  db.execEx(query, chatId, authorUid, subjUid, text)
 
 proc forgetOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int) =
@@ -187,7 +188,7 @@ proc forgetOpinion*(db: DbConn, chatId: int64,
        AND author_uid = ?
        AND subj_uid = ?
   """
-  db.exec(query, chatId, authorUid, subjUid)
+  db.execEx(query, chatId, authorUid, subjUid)
 
 proc searchOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int): Option[OpinionRow] =
