@@ -65,7 +65,7 @@ proc cleanEntities*(text: string): string =
 
 proc fullName*(user: User): string =
   user.last_name ?-> lastName:
-    user.first_name & " " & last_name
+    user.first_name & " " & lastName
   else:
     user.first_name
 

@@ -1,5 +1,6 @@
 import macros
 import options
+import typetraits
 
 template optionType*[T](a : Option[T]) : auto =
   # Leaked implementation detail. Do not use.
@@ -18,36 +19,8 @@ template `?:`*[T](val: Option[T], default: T): T =
   # Elvis operator.
   val.get(default)
 
-macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
-  # Pattern matching for Option[T] type.
-  #
-  # Following code:
-  #
-  #   EXPR ?-> IDENT:
-  #     BODY
-  #   else:        # optional
-  #     ELSE_BODY  #
-  #
-  # Expands to:
-  #
-  #   let :v = EXPR
-  #   if :v.isSome:
-  #     let IDENT = v.get
-  #   else:
-  #     ELSE_BODY
-  #
-  # Where EXPR have type Option[T] and IDENT have type T.
-
-  assert IDENT.kind == nnkIdent
-  assert BODY.kind == nnkStmtList
-
-  var ELSE_BODY : NimNode
-  if BODY.last.kind == nnkElse:
-    ELSE_BODY = BODY.last
-    BODY.del(BODY.len - 1)
-
+proc optionMatch(EXPR, IDENT, BODY, ELSE_BODY: NimNode): NimNode =
   let v = genSym()
-
   let ifStmt = newIfStmt(
       (newDotExpr(v, newIdentNode "isSome"),
        newStmtList(newLetStmt(IDENT, newDotExpr(v, newIdentNode "get")),
@@ -55,3 +28,46 @@ macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
   if not ELSE_BODY.isNil:
     ifStmt.add ELSE_BODY
   return newStmtList(newLetStmt(v, EXPR), ifStmt)
+
+macro `?->`*(EXPR, IDENT, BODY, ELSE_BODY: untyped): untyped =
+  # Following code:
+  #
+  #   EXPR ?-> IDENT:
+  #     BODY
+  #
+  # Expands to:
+  #
+  #   let :v = EXPR
+  #   if :v.isSome:
+  #     let IDENT = v.get
+  #     BODY
+  #
+  # Where EXPR have type Option[T] and IDENT have type T.
+
+  assert IDENT.kind == nnkIdent
+  assert BODY.kind == nnkStmtList
+  assert ELSE_BODY.kind == nnkElse
+  return optionMatch(EXPR, IDENT, BODY, ELSE_BODY)
+
+macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
+  # Following code:
+  #
+  #   EXPR ?-> IDENT:
+  #     BODY
+  #   else:
+  #     ELSE_BODY
+  #
+  # Expands to:
+  #
+  #   let :v = EXPR
+  #   if :v.isSome:
+  #     let IDENT = v.get
+  #     BODY
+  #   else:
+  #     ELSE_BODY
+  #
+  # Where EXPR have type Option[T] and IDENT have type T.
+
+  assert IDENT.kind == nnkIdent
+  assert BODY.kind == nnkStmtList
+  return optionMatch(EXPR, IDENT, BODY, nil)

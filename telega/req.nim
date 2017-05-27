@@ -34,7 +34,8 @@ proc telegramMethod*(this: Telega,
   let client = newAsyncHttpClient()
   let url = BASE_URL & this.token & "/" & name
   let resp = await client.post(url, multipart=data)
-  let res = parseJson(resp.body)
+  let body = await resp.body
+  let res = parseJson(body)
   client.close()
 
   if res["ok"].getBVal:
