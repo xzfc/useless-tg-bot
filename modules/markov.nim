@@ -4,6 +4,7 @@ import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
+import ../utils/randomEmoji
 import asyncdispatch
 import db_sqlite
 import nre
@@ -14,9 +15,10 @@ import strutils
 import unicode
 
 let reQuestion = re r"""(*UTF8)(?x)(?i)
-  (я|мы|он|она|они)
+  (я|мы|он|она|они|мне|ему|ей|им)
+  ,?
   \ +
-  .*
+  (?: [^.] | \.[^ ] )+ # anything except ". "
   \?
   $
 """
@@ -78,6 +80,11 @@ proc process*(bot: Bot, update: Update) {.async.} =
           of "он":  start = "Он"
           of "она": start = "Она"
           of "они": start = "Они"
+          of "мне": start = "Тебе"
+          of "ему": start = "Ему"
+          of "ей":  start = "Ей"
+          of "им":  start = "Им"
         let replyText = bot.db.generatePhrase(message.chat.id, start, 20)
         if replyText.len != 0:
-          asyncCheck bot.tg.reply(message, start & " " & replyText)
+          asyncCheck bot.tg.reply(message,
+                                  start & " " & replyText & " " & randomEmoji())
