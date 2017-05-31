@@ -55,6 +55,11 @@ proc htmlEscape(s: string): string =
     else:   add(result, c)
   return result
 
+proc at[T](s: seq[T], idx: int): Option[T] =
+  if idx < 0 or idx >= s.len:
+    none(T)
+  else:
+    some(s[idx])
 
 proc renderRow(row: OpinionRow): string =
   "$1 — $2 <i>($3)</i>" % [
@@ -86,11 +91,12 @@ proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
   else:
     rows.map(renderRatingRow).join("\n")
 
-proc getUser(bot: Bot, mention: string, user: MessageEntity): Option[User] =
+proc getUser(bot: Bot, mention: string, user: Option[MessageEntity]
+            ): Option[User] =
   if mention.startsWith '@':
-    return bot.db.searchUserByUname mention[1..^1]
+    bot.db.searchUserByUname mention[1..^1]
   else:
-    return some(user.user)
+    some user.get.user
 
 template reply(text: string) =
   asyncCheck bot.tg.reply(update.message.get,
@@ -110,14 +116,14 @@ proc process*(bot: Bot, update: Update) {.async.} =
 
   if update.isCommand(bot, "about"):
     html.match(is_about_user) ?-> match:
-      getUser(bot, match.captures["user"], entities[1]) ?-> user:
+      getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
         reply renderRowsAbout(user, rows)
       else:
         reply "Не видела тут $1." % [match.captures["user"]]
       return
     html.match(is_about_cmd_user) ?-> match:
-      getUser(bot, match.captures["user"], entities[1]) ?-> user:
+      getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
           reply renderRowsBy(user, rows)
@@ -139,7 +145,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
     reply "..."
   else:
     render_entities(text, entities).match(is_re) ?-> match:
-      getUser(bot, match.captures["user"], entities[0]) ?-> user:
+      getUser(bot, match.captures["user"], entities.at 0) ?-> user:
         let old = bot.db.searchOpinion(chatId, from0.id, user.id)
         bot.db.rememberOpinion(chatId, from0.id, user.id,
                                match.captures["text"].cleanEntities)
