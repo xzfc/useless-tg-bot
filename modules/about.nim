@@ -105,11 +105,11 @@ template reply(text: string) =
                           disableWebPagePreview=true)
 
 proc process*(bot: Bot, update: Update) {.async.} =
-  if (update.message?.text).isNone or (update.message?.from0).isNone:
+  if (update.message?.text).isNone or (update.message?.`from`).isNone:
     return
   let message = update.message.get
   let chatId = message.chat.id
-  let from0 = message.from0.get
+  let `from` = message.`from`.get
   let text = message.text.get
   let entities = message.entities ?: @[]
   let html = render_entities(text, entities)
@@ -128,9 +128,9 @@ proc process*(bot: Bot, update: Update) {.async.} =
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
           reply renderRowsBy(user, rows)
         else:
-          let old = bot.db.searchOpinion(chatId, from0.id, user.id)
+          let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
           if old.isSome:
-            bot.db.forgetOpinion(chatId, from0.id, user.id)
+            bot.db.forgetOpinion(chatId, `from`.id, user.id)
             reply "Удалила!"
           else:
             reply "..."
@@ -146,8 +146,8 @@ proc process*(bot: Bot, update: Update) {.async.} =
   else:
     render_entities(text, entities).match(is_re) ?-> match:
       getUser(bot, match.captures["user"], entities.at 0) ?-> user:
-        let old = bot.db.searchOpinion(chatId, from0.id, user.id)
-        bot.db.rememberOpinion(chatId, from0.id, user.id,
+        let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
+        bot.db.rememberOpinion(chatId, `from`.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
           reply "Переписала!"

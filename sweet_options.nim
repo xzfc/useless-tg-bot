@@ -2,7 +2,7 @@ import macros
 import options
 import typetraits
 
-template optionType*[T](a : Option[T]) : auto =
+template optionType*[T](a: Option[T]): auto =
   # Leaked implementation detail. Do not use.
   T
 

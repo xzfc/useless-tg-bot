@@ -38,6 +38,7 @@ proc telegramMethod*(this: Telega,
   let res = parseJson(body)
   client.close()
 
+  # XXX: `[]` can fail
   if res["ok"].getBVal:
     result.ok = true
     result.result = res["result"]
@@ -46,18 +47,18 @@ proc telegramMethod*(this: Telega,
     result.code = res["error_code"].getNum.int
     result.description = res["description"].getStr
 
-proc newTelega*(token : string) : Telega =
+proc newTelega*(token: string): Telega =
   new(result)
   result.token = token
   result.update_id = 0
 
-proc getMe*(this : Telega) : Future[User] {.async.} =
+proc getMe*(this: Telega): Future[User] {.async.} =
   let reply = await telegramMethod(this, "getMe", nil)
   return reply.getResult.parseUser
 
 proc getUpdates*(this: Telega,
                  logFile: File = nil,
-                 timeout: int = 10) : Future[seq[Update]] {.async.} =
+                 timeout: int = 10): Future[seq[Update]] {.async.} =
   var form = newMultiPartData()
   form["offset"] = $this.update_id
   form["timeout"] = $timeout
@@ -81,7 +82,7 @@ proc sendMessage*(this: Telega,
                   parseMode: string = "",
                   disableWebPagePreview: bool = false,
                   replyToMessageId: int = 0
-            ) : Future[bool] {.async.} =
+            ): Future[bool] {.async.} =
   var form = newMultiPartData()
   form["chat_id"] = $chatId
   form["text"] = text

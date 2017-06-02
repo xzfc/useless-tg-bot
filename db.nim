@@ -21,18 +21,18 @@ type
     count *: uint
 
 proc allRows(db: DbConn, query: SqlQuery,
-             args: varargs[DbValue, dbValue]) : seq[Row] =
+             args: varargs[DbValue, dbValue]): seq[Row] =
   return toSeq(db.fastRowsEx(query, args))
 
-proc optionalRow(db: DbConn, query : SqlQuery,
-      args : varargs[DbValue, dbValue]) : Option[Row] =
+proc optionalRow(db: DbConn, query: SqlQuery,
+      args: varargs[DbValue, dbValue]): Option[Row] =
   let a = db.allRows(query, args)
   if a.len() == 0:
     return none(Row)
   else:
     return some(a[0])
 
-proc getNil(s : Option[string]): string =
+proc getNil(s: Option[string]): string =
   if s.isSome:
     return s.get
   else:
@@ -44,7 +44,7 @@ proc putNil(s: string): Option[string] =
   else:
     some(s)
 
-proc get_0(row : Row) : auto = row[0]
+proc get_0(row: Row): auto = row[0]
 
 proc getUser(row: Row, idx: int): User =
   result.id         = row[idx+0].parseInt.int32
@@ -70,7 +70,7 @@ proc getMarkovNextRow(r: Row): MarkovNextRow =
   result.word  = if r[0].len == 0: nil else: r[0]
   result.count = r[1].parseUint
 
-proc init*(db : DbConn) =
+proc init*(db: DbConn) =
   db.execEx sql"""
     CREATE TABLE IF NOT EXISTS users (
       uid        INTEGER,
@@ -139,7 +139,7 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[User] =
   return db.optionalRow(query, uname).map(getUser)
 
 proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
-                              subjUid: int) : seq[OpinionRow] =
+                              subjUid: int): seq[OpinionRow] =
   const query = sql"""
     SELECT o.chat_id, a.*, s.*, o.text
       FROM opinions AS o
@@ -151,7 +151,7 @@ proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
   return db.allRows(query, chatId, subjUid).map(getOpinionRow)
 
 proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
-                                authorUid: int) : seq[OpinionRow] =
+                                authorUid: int): seq[OpinionRow] =
   const query = sql"""
     SELECT o.chat_id, a.*, s.*, o.text
       FROM opinions AS o

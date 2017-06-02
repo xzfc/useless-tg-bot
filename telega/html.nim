@@ -12,9 +12,9 @@ proc render_entities*(text: string, entities: seq[MessageEntity]): string =
   var ent = 0
   var inside = false
 
-  proc apply_ent(result : var string) =
+  proc apply_ent(result: var string) =
     if ent < entities.len and inside and pos == entities[ent].offset + entities[ent].length:
-      case entities[ent].type0:
+      case entities[ent].`type`:
       of metItalic:      result.add "</i>"
       of metBold:        result.add "</b>"
       of metCode:        result.add "</code>"
@@ -25,7 +25,7 @@ proc render_entities*(text: string, entities: seq[MessageEntity]): string =
       inside = false
       inc ent
     if ent < entities.len and not inside and pos == entities[ent].offset:
-      case entities[ent].type0:
+      case entities[ent].`type`:
       of metItalic:      result.add "<i>"
       of metBold:        result.add "<b>"
       of metCode:        result.add "<code>"
@@ -64,10 +64,10 @@ proc cleanEntities*(text: string): string =
   return text.replace(cleanRe, "")
 
 proc fullName*(user: User): string =
-  user.last_name ?-> lastName:
-    user.first_name & " " & lastName
+  user.lastName ?-> lastName:
+    user.firstName & " " & lastName
   else:
-    user.first_name
+    user.firstName
 
  # #        ##### #####  #### #####  #### 
 #####         #   #     #       #   #     
@@ -76,13 +76,13 @@ proc fullName*(user: User): string =
  # #          #   ##### ####    #   ####  
 
 
-proc bold(offset, length: int32) : MessageEntity =
-  result.type0 = metBold
+proc bold(offset, length: int32): MessageEntity =
+  result.`type` = metBold
   result.offset = offset
   result.length = length
 
-proc user(offset, length: int32) : MessageEntity =
-  result.type0 = metTextMention
+proc user(offset, length: int32): MessageEntity =
+  result.`type` = metTextMention
   result.offset = offset
   result.length = length
   result.user.id = 123
