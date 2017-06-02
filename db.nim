@@ -44,7 +44,9 @@ proc putNil(s: string): Option[string] =
   else:
     some(s)
 
-proc get_0(row: Row): auto = row[0]
+proc get_0(row: Row): string = row[0]
+
+proc get_0int(row: Row): int = row[0].parseInt
 
 proc getUser(row: Row, idx: int): User =
   result.id         = row[idx+0].parseInt.int32
@@ -100,6 +102,13 @@ proc init*(db: DbConn) =
       word_to    TEXT,
       count      INTEGER,
       PRIMARY KEY (chat_id, word_from, word_to)
+    )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS last_user_message (
+      chat_id    INTEGER,
+      user_id    INTEGER,
+      message_id INTEGER,
+      PRIMARY KEY (chat_id, user_id)
     )"""
 
 proc rememberUser*(db: DbConn, user: User) =
@@ -245,3 +254,23 @@ proc markovGetNext*(db: DbConn, chatId: int64, wordFrom: string
        AND word_from = ?
   """
   db.allRows(query, chatId, wordFrom).map(getMarkovNextRow)
+
+################################################################################
+
+proc rememberLastUserMessage*(db: DbConn, chatId: int64, userId: int,
+                              messageId: int) =
+  const query = sql"""
+    INSERT OR REPLACE
+      INTO last_user_message
+    VALUES (?, ?, ?)
+  """
+  db.execEx(query, chatId, userId, messageId)
+
+proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
+  const query = sql"""
+    SELECT message_id
+      FROM last_user_message
+     WHERE chat_id = ?
+       AND user_id = ?
+  """
+  db.optionalRow(query, chatId, userId).map(get_0int)

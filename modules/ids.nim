@@ -1,11 +1,12 @@
 import ../bot
 import ../db
+import ../sweet_options
 import ../telega/types
 import asyncdispatch
 import options
 import sequtils
 
-proc process*(bot: Bot, update: Update) {.async.} =
+proc rememberUsers(bot: Bot, update: Update) =
   proc handleUser(user: User) =
     bot.db.rememberUser user
   proc handleEntity(entity: MessageEntity) =
@@ -28,3 +29,13 @@ proc process*(bot: Bot, update: Update) {.async.} =
   update.channelPost.map       handleMessage
   update.editedChannelPost.map handleMessage
 
+proc rememberLast(bot: Bot, update: Update) =
+  update.message ?-> message:
+    message.`from` ?-> from0:
+      bot.db.rememberLastUserMessage(message.chat.id,
+                                     from0.id,
+                                     message.messageId)
+
+proc process*(bot: Bot, update: Update) {.async.} =
+  rememberUsers(bot, update)
+  rememberLast(bot, update)
