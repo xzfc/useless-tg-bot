@@ -1,5 +1,6 @@
 import ./bot
 import ./modules/about as module_about
+import ./modules/annoy as module_annoy
 import ./modules/ids as module_ids
 import ./modules/markov as module_markov
 import ./modules/reply as module_reply
@@ -16,6 +17,7 @@ proc main(token, dbPath, logPath: string) {.async.} =
     for update in updates:
       await module_ids.process(bot, update)
       await module_about.process(bot, update)
+      await module_annoy.process(bot, update)
       await module_markov.process(bot, update)
       await module_reply.process(bot, update)
 
