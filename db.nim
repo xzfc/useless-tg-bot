@@ -8,7 +8,6 @@ import telega/types
 
 type
   OpinionRow* = object
-    chat_id *: int64
     author  *: User
     subj    *: User
     text    *: string
@@ -58,10 +57,9 @@ proc getUser(row: Row): User =
   getUser(row, 0)
 
 proc getOpinionRow(r: Row): OpinionRow =
-  result.chat_id = r[0].parseInt.int64
-  result.author  = getUser(r, 1)
-  result.subj    = getUser(r, 5)
-  result.text    = r[9]
+  result.author  = getUser(r, 0)
+  result.subj    = getUser(r, 4)
+  result.text    = r[8]
 
 proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.user     = getUser(r, 0)
@@ -89,11 +87,11 @@ proc init*(db: DbConn) =
     )"""
   db.execEx sql"""
     CREATE TABLE IF NOT EXISTS opinions (
-      chat_id    INTEGER,
+      cluster_id INTEGER,
       author_uid INTEGER,
       subj_uid   INTEGER,
       text       TEXT,
-      PRIMARY KEY (chat_id, author_uid, subj_uid)
+      PRIMARY KEY (cluster_id, author_uid, subj_uid)
     )"""
   db.execEx sql"""
     CREATE TABLE IF NOT EXISTS markov (
@@ -109,6 +107,13 @@ proc init*(db: DbConn) =
       user_id    INTEGER,
       message_id INTEGER,
       PRIMARY KEY (chat_id, user_id)
+    )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS chats (
+      chat_id    INTEGER,
+      name       TEXT,
+      cluster_id INTEGER,
+      PRIMARY KEY (chat_id)
     )"""
 
 proc rememberUser*(db: DbConn, user: User) =
@@ -150,11 +155,12 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[User] =
 proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
                               subjUid: int): seq[OpinionRow] =
   const query = sql"""
-    SELECT o.chat_id, a.*, s.*, o.text
+    SELECT a.*, s.*, o.text
       FROM opinions AS o
+           INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users a ON a.uid = o.author_uid
            INNER JOIN users s ON s.uid = o.subj_uid
-     WHERE o.chat_id = ?
+     WHERE g.chat_id = ?
        AND o.subj_uid = ?
   """
   return db.allRows(query, chatId, subjUid).map(getOpinionRow)
@@ -162,31 +168,35 @@ proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
 proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
                                 authorUid: int): seq[OpinionRow] =
   const query = sql"""
-    SELECT o.chat_id, a.*, s.*, o.text
+    SELECT a.*, s.*, o.text
       FROM opinions AS o
+           INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users AS a ON a.uid = o.author_uid
            INNER JOIN users AS s ON s.uid = o.subj_uid
-     WHERE o.chat_id = ?
+     WHERE g.chat_id = ?
        AND o.author_uid = ?
   """
   return db.allRows(query, chatId, authorUid).map(getOpinionRow)
 
 proc searchOpinionsRating*(db: DbConn, chatId: int64): seq[OpinionRatingRow] =
+  # TODO: use only one INNER JOIN?
   const query = sql"""
     SELECT u.*, IFNULL(a.c, 0) AS cnt_a, IFNULL(s.c, 0) AS cnt_s
       FROM users AS u
 
            LEFT JOIN (SELECT author_uid AS uid, count() AS c
-                        FROM opinions
-                       WHERE chat_id = ?
-                       GROUP BY author_uid)
-              AS a
-              ON a.uid = u.uid
+                        FROM opinions AS o
+                             INNER JOIN chats g ON g.cluster_id = o.cluster_id
+                       WHERE g.chat_id = ?
+                       GROUP BY o.author_uid)
+                  AS a
+                  ON a.uid = u.uid
          
            LEFT JOIN (SELECT subj_uid AS uid, count() AS c
-                        FROM opinions
-                       WHERE chat_id = ?
-                       GROUP BY subj_uid)
+                        FROM opinions AS o
+                             INNER JOIN chats g ON g.cluster_id = o.cluster_id
+                       WHERE g.chat_id = ?
+                       GROUP BY o.subj_uid)
                   AS s
                   ON s.uid = u.uid
 
@@ -200,7 +210,10 @@ proc rememberOpinion*(db: DbConn, chatId: int64,
                       text: string) =
   const query = sql"""
     INSERT OR REPLACE INTO opinions
-    VALUES (?, ?, ?, ?)
+    VALUES ((SELECT cluster_id
+               FROM chats
+              WHERE chat_id = ?),
+            ?, ?, ?)
   """
   db.execEx(query, chatId, authorUid, subjUid, text)
 
@@ -208,7 +221,9 @@ proc forgetOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int) =
   const query = sql"""
     DELETE FROM opinions
-     WHERE chat_id = ?
+     WHERE cluster_id = (SELECT cluster_id
+                           FROM chats
+                          WHERE chat_id = ?)
        AND author_uid = ?
        AND subj_uid = ?
   """
@@ -217,11 +232,12 @@ proc forgetOpinion*(db: DbConn, chatId: int64,
 proc searchOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int): Option[OpinionRow] =
   const query = sql"""
-    SELECT o.chat_id, a.*, s.*, o.text
+    SELECT a.*, s.*, o.text
       FROM opinions AS o
+           INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users a ON a.uid = o.author_uid
            INNER JOIN users s ON s.uid = o.subj_uid
-     WHERE o.chat_id = ?
+     WHERE g.chat_id = ?
        AND o.author_uid = ?
        AND o.subj_uid = ?
      LIMIT 1
@@ -274,3 +290,16 @@ proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
        AND user_id = ?
   """
   db.optionalRow(query, chatId, userId).map(get_0int)
+
+################################################################################
+
+proc rememberChat*(db: DbConn, chatId: int64, name: string) =
+  const query = sql"""
+    INSERT OR REPLACE
+      INTO chats
+    VALUES (?, ?,
+            COALESCE((SELECT cluster_id
+                        FROM chats
+                       WHERE chat_id = ?), ?))
+  """
+  db.execEx(query, chatId, name, chatId, chatId)

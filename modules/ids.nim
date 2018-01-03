@@ -2,6 +2,7 @@ import ../bot
 import ../db
 import ../sweet_options
 import ../telega/types
+import ../telega/html
 import asyncdispatch
 import options
 import sequtils
@@ -36,6 +37,18 @@ proc rememberLast(bot: Bot, update: Update) =
                                      from0.id,
                                      message.messageId)
 
+proc getTitle(message: Message): string =
+  message.chat.title ?-> t:
+    return t
+  message.from ?-> user:
+    return user.fullName
+  return "Unknown"
+
+proc rememberChat(bot: Bot, update: Update) =
+  update.message ?-> message:
+    bot.db.rememberChat(message.chat.id, message.getTitle)
+
 proc process*(bot: Bot, update: Update) {.async.} =
   rememberUsers(bot, update)
   rememberLast(bot, update)
+  rememberChat(bot, update)
