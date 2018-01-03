@@ -15,6 +15,7 @@ import strutils
 import unicode
 
 let reQuestion = re r"""(*UTF8)(?x)(?i)
+  ! \ *
   (я|мы|он|она|они|мне|ему|ей|им)
   ,?
   \ +
