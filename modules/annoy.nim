@@ -9,8 +9,17 @@ import asyncdispatch
 proc process*(bot: Bot, update: Update) {.async.} =
   if update.isCommand(bot, "futo"):
     update.message ?-> message:
+      let futoName = randomFuto()
+      var msg : string
+      var replyTo : int
       bot.db.getLastUserMessage(message.chat.id, 194630356) ?-> lastFutoMessage:
-        asyncCheck bot.tg.sendMessage(message.chat.id,
-                                      randomFuto(),
-                                      replyToMessageId=lastFutoMessage,
-                                      parseMode="HTML")
+        msg = futoName
+        # replyTo = lastFutoMessage # Not now
+        replyTo = message.messageId
+      else:
+        msg = "Я не видела тут " & futoName & "."
+        replyTo = message.messageId
+      asyncCheck bot.tg.sendMessage(message.chat.id,
+                                    msg,
+                                    replyToMessageId=replyTo,
+                                    parseMode="HTML")
