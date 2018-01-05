@@ -13,15 +13,15 @@ proc weighedChoice[T](s: seq[(int, T)]): T =
 
 proc gen1(): string =
   @[
-    "фу",
+    @[(5, "фу"), (1, "фру")].weighedChoice,
     @[(5, ""), (1, "т")].weighedChoice,
     @[(1, ""), (5, "тян"), (1, "нян")].weighedChoice,
-    @[(5, ""), (5, "о"), (2, "очка")].weighedChoice,
+    @[(5, ""), (5, "о"), (5, "я"), (2, "очка")].weighedChoice,
     @[(50, ""), (20, "-нян"), (1, "-нян-нян"), (20, "-сама")].weighedChoice,
    ].join()
 
 proc gen1ok(s: string): bool =
-  s != "фу" and not s.startsWith("фуо")
+  s != "фу" and not s.contains("уо") and not s.contains("уя")
 
 proc gen2(): string =
   result = gen1()
