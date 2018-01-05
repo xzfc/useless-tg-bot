@@ -11,6 +11,7 @@ import nre
 import options
 import sequtils
 import strutils
+import times
 
 let is_re = re(r"""(*UTF8)(?x)
   (?<user> @[a-zA-Z0-9_]+ | <user\ ent=0>[^<]*<\/user> )
@@ -61,11 +62,18 @@ proc at[T](s: seq[T], idx: int): Option[T] =
   else:
     some(s[idx])
 
+proc renderTime(t: Time): string =
+  if t < 1514764800.Time:
+    ", 2017"
+  else:
+    ""
+
 proc renderRow(row: OpinionRow): string =
-  "$1 — $2 <i>($3)</i>" % [
+  "$1 — $2 <i>($3$4)</i>" % [
     row.subj.fullName.htmlEscape,
     row.text,
-    row.author.fullName.htmlEscape]
+    row.author.fullName.htmlEscape,
+    row.datetime.renderTime]
 
 proc renderRatingRow(row: OpinionRatingRow): string =
   "<code>$1 $2</code> $3" % [

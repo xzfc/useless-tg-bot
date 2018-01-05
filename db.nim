@@ -5,12 +5,14 @@ import sequtils
 import strutils
 import telega/html
 import telega/types
+import times
 
 type
   OpinionRow* = object
-    author  *: User
-    subj    *: User
-    text    *: string
+    author   *: User
+    subj     *: User
+    text     *: string
+    datetime *: Time
   OpinionRatingRow* = object
     user     *: User
     asAuthor *: uint
@@ -57,9 +59,10 @@ proc getUser(row: Row): User =
   getUser(row, 0)
 
 proc getOpinionRow(r: Row): OpinionRow =
-  result.author  = getUser(r, 0)
-  result.subj    = getUser(r, 4)
-  result.text    = r[8]
+  result.author   = getUser(r, 0)
+  result.subj     = getUser(r, 4)
+  result.text     = r[8]
+  result.datetime = r[9].parseInt.Time
 
 proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.user     = getUser(r, 0)
@@ -91,6 +94,7 @@ proc init*(db: DbConn) =
       author_uid INTEGER,
       subj_uid   INTEGER,
       text       TEXT,
+      datetime   DATETIME,
       PRIMARY KEY (cluster_id, author_uid, subj_uid)
     )"""
   db.execEx sql"""
@@ -155,26 +159,28 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[User] =
 proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
                               subjUid: int): seq[OpinionRow] =
   const query = sql"""
-    SELECT a.*, s.*, o.text
+    SELECT a.*, s.*, o.text, o.datetime
       FROM opinions AS o
            INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users a ON a.uid = o.author_uid
            INNER JOIN users s ON s.uid = o.subj_uid
      WHERE g.chat_id = ?
        AND o.subj_uid = ?
+     ORDER BY datetime DESC
   """
   return db.allRows(query, chatId, subjUid).map(getOpinionRow)
 
 proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
                                 authorUid: int): seq[OpinionRow] =
   const query = sql"""
-    SELECT a.*, s.*, o.text
+    SELECT a.*, s.*, o.text, o.datetime
       FROM opinions AS o
            INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users AS a ON a.uid = o.author_uid
            INNER JOIN users AS s ON s.uid = o.subj_uid
      WHERE g.chat_id = ?
        AND o.author_uid = ?
+     ORDER BY datetime DESC
   """
   return db.allRows(query, chatId, authorUid).map(getOpinionRow)
 
@@ -209,13 +215,13 @@ proc rememberOpinion*(db: DbConn, chatId: int64,
                       authorUid, subjUid: int,
                       text: string) =
   const query = sql"""
-    INSERT OR REPLACE INTO opinions
-    VALUES ((SELECT cluster_id
-               FROM chats
-              WHERE chat_id = ?),
-            ?, ?, ?)
+    INSERT OR REPLACE
+      INTO opinions
+    SELECT cluster_id, ?, ?, ?, CAST(STRFTIME('%s', 'now') AS INT)
+      FROM chats
+     WHERE chat_id = ?
   """
-  db.execEx(query, chatId, authorUid, subjUid, text)
+  db.execEx(query, authorUid, subjUid, text, chatId)
 
 proc forgetOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int) =
@@ -232,7 +238,7 @@ proc forgetOpinion*(db: DbConn, chatId: int64,
 proc searchOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int): Option[OpinionRow] =
   const query = sql"""
-    SELECT a.*, s.*, o.text
+    SELECT a.*, s.*, o.text, o.datetime
       FROM opinions AS o
            INNER JOIN chats g ON g.cluster_id = o.cluster_id
            INNER JOIN users a ON a.uid = o.author_uid
