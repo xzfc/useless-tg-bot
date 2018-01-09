@@ -19,6 +19,7 @@ type
 
   User* = object
     id           *: int32
+    is_bot       *: bool
     firstName    *: string
     lastName     *: Option[string]
     username     *: Option[string]
@@ -36,6 +37,7 @@ type
     height   *: uint
     thumb    *: Option[PhotoSize]
     emoji    *: Option[string]
+    set_name *: Option[string]
     fileSize *: Option[uint]
 
   Document* = object
@@ -78,6 +80,7 @@ type
     forwardFrom           *: Option[User]
     forwardFromChat       *: Option[Chat]
     forwardFromMessageId  *: Option[int32]
+    forwardSignature      *: Option[string]
     forwardDate           *: Option[int32]
     replyToMessage        *: ref Message
     editDate              *: Option[int32]
@@ -94,7 +97,10 @@ type
     #contact              *: Option[Contact]
     #location             *: Option[Location]
     #venue                *: Option[Venue]
-    newChatMember         *: Option[User]
+    newChatMember         *: Option[User] # undocumented
+    newChatParticipant    *: Option[User] # undocumented
+    newChatMembers        *: Option[seq[User]]
+    leftChatParticipant   *: Option[User] # undocumented
     leftChatMember        *: Option[User]
     newChatTitle          *: Option[string]
     newChatPhoto          *: Option[seq[PhotoSize]]
