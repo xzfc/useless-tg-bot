@@ -46,6 +46,15 @@ let is_about_all = re r"""(*UTF8)(?x)
   $
 """
 
+let help = """
+Команды:
+@$1 -- сплетница
+/about @$1
+/about by @$1
+/about del @$1
+/about rating
+"""
+
 proc htmlEscape(s: string): string =
   result = ""
   for c in items(s):
@@ -161,6 +170,9 @@ proc process*(bot: Bot, update: Update) {.async.} =
     html.match(is_about_all) ?-> match:
       let rows = bot.db.searchOpinionsRating(chatId)
       reply renderRatingRows(rows)
+      return
+    if text == "/about":
+      reply help % [bot.me.username.unsafeGet]
       return
     reply "..."
   else:
