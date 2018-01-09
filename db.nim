@@ -8,13 +8,19 @@ import telega/types
 import times
 
 type
+  DbUser* = object
+    id        *: int32
+    firstName *: string
+    lastName  *: Option[string]
+    username  *: Option[string]
+    deleted   *: bool
   OpinionRow* = object
-    author   *: User
-    subj     *: User
+    author   *: DbUser
+    subj     *: DbUser
     text     *: string
     datetime *: Time
   OpinionRatingRow* = object
-    user     *: User
+    user     *: DbUser
     asAuthor *: uint
     asSubj   *: uint
   MarkovNextRow* = object
@@ -49,29 +55,36 @@ proc get_0(row: Row): string = row[0]
 
 proc get_0int(row: Row): int = row[0].parseInt
 
-proc getUser(row: Row, idx: int): User =
+proc getUser(row: Row, idx: int): DbUser =
   result.id         = row[idx+0].parseInt.int32
   result.first_name = row[idx+1]
   result.last_name  = row[idx+2].putNil
   result.username   = row[idx+3].putNil
+  result.deleted    = row[idx+4].parseInt != 0
 
-proc getUser(row: Row): User =
+proc getUser(row: Row): DbUser =
   getUser(row, 0)
 
 proc getOpinionRow(r: Row): OpinionRow =
   result.author   = getUser(r, 0)
-  result.subj     = getUser(r, 4)
-  result.text     = r[8]
-  result.datetime = r[9].parseInt.Time
+  result.subj     = getUser(r, 5)
+  result.text     = r[10]
+  result.datetime = r[11].parseInt.Time
 
 proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.user     = getUser(r, 0)
-  result.asAuthor = r[4].parseUint
-  result.asSubj   = r[5].parseUint
+  result.asAuthor = r[5].parseUint
+  result.asSubj   = r[6].parseUint
 
 proc getMarkovNextRow(r: Row): MarkovNextRow =
   result.word  = if r[0].len == 0: nil else: r[0]
   result.count = r[1].parseUint
+
+proc toUser*(user: DbUser): User =
+  result.id = user.id
+  result.first_name = user.first_name
+  result.last_name = user.last_name
+  result.username = user.username
 
 proc init*(db: DbConn) =
   db.execEx sql"""
@@ -80,6 +93,7 @@ proc init*(db: DbConn) =
       first      TEXT,
       last       TEXT,
       uname      TEXT COLLATE NOCASE,
+      deleted    BOOLEAN,
       PRIMARY KEY (uid)
     )"""
   db.execEx sql"""
@@ -125,20 +139,29 @@ proc rememberUser*(db: DbConn, user: User) =
     db.execEx sql"""
                 UPDATE users
                    SET uname = NULL
-                 WHERE uname == ?
+                 WHERE uname = ?
+                   AND NOT deleted
               """,
               user.username.get
-  db.execEx sql"""
-              INSERT OR REPLACE
-                INTO users
-              VALUES (?, ?, ?, ?)
-            """,
-            user.id,
-            user.first_name,
-            user.last_name.getNil,
-            user.username.getNil
+  if user.isDeleted:
+    db.execEx sql"""
+                UPDATE users
+                   SET deleted = 1
+                 WHERE uid = ?
+              """,
+              user.id
+  else:
+    db.execEx sql"""
+                INSERT OR REPLACE
+                  INTO users
+                VALUES (?, ?, ?, ?, 0)
+              """,
+              user.id,
+              user.first_name,
+              user.last_name.getNil,
+              user.username.getNil
 
-proc searchUserByUid*(db: DbConn, uid: int32): Option[User] =
+proc searchUserByUid*(db: DbConn, uid: int32): Option[DbUser] =
   let query = sql"""
     SELECT *
       FROM users
@@ -147,11 +170,12 @@ proc searchUserByUid*(db: DbConn, uid: int32): Option[User] =
   """
   return db.optionalRow(query, uid).map(getUser)
 
-proc searchUserByUname*(db: DbConn, uname: string): Option[User] =
+proc searchUserByUname*(db: DbConn, uname: string): Option[DbUser] =
   let query = sql"""
     SELECT *
       FROM users
      WHERE uname = ?
+       AND NOT deleted
      LIMIT 1
   """
   return db.optionalRow(query, uname).map(getUser)

@@ -69,6 +69,11 @@ proc fullName*(user: User): string =
   else:
     user.firstName
 
+proc isDeleted*(user: User): bool =
+  user.firstName.isNilOrEmpty and
+    user.lastName.isNone and
+    user.username.isNone
+
  # #        ##### #####  #### #####  #### 
 #####         #   #     #       #   #     
  # #          #   ####   ###    #    ###  

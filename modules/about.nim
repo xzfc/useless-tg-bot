@@ -68,6 +68,15 @@ proc renderTime(t: Time): string =
   else:
     ""
 
+proc fullName(user: DbUser): string =
+  (if user.deleted: "†" else: "") & user.toUser.fullName.htmlEscape 
+
+proc fullNameRating(user: DbUser): string =
+  if not user.deleted:
+    user.toUser.fullName.htmlEscape
+  else:
+    "†" & user.toUser.fullName.htmlEscape & " @" & $user.id
+
 proc renderRow(row: OpinionRow): string =
   "$1 — $2 <i>($3$4)</i>" % [
     row.subj.fullName.htmlEscape,
@@ -79,7 +88,7 @@ proc renderRatingRow(row: OpinionRatingRow): string =
   "<code>$1 $2</code> $3" % [
     ($row.asSubj).align 2,
     ($row.asAuthor).align 2,
-    row.user.fullName.htmlEscape]
+    row.user.fullNameRating]
 
 proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
   if rows.len == 0:
@@ -102,7 +111,10 @@ proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
 proc getUser(bot: Bot, mention: string, user: Option[MessageEntity]
             ): Option[User] =
   if mention.startsWith '@':
-    bot.db.searchUserByUname mention[1..^1]
+    try:
+      bot.db.searchUserByUid(mention[1..^1].parseInt.int32).map(toUser)
+    except ValueError:
+      bot.db.searchUserByUname(mention[1..^1]).map(toUser)
   else:
     some user.get.user
 
