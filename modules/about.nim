@@ -24,7 +24,7 @@ let is_re = re(r"""(*UTF8)(?x)
 let is_about_user = re r"""(*UTF8)(?x)
   \/[@a-zA-Z_]+
   \ +
-  (?<user> @[a-zA-Z0-9_]+ | <user\ ent=1>[^<]*<\/user> )
+  (?<user> @[a-zA-Z0-9_]+ | <user\ ent=1>[^<]*<\/user> | me )
   \ *
   $
 """
@@ -34,7 +34,7 @@ let is_about_cmd_user = re r"""(*UTF8)(?x)
   \ +
   (?<cmd>by|del)
   \ +
-  (?<user> @[a-zA-Z0-9_]+ | <user\ ent=1>[^<]*<\/user> )
+  (?<user> @[a-zA-Z0-9_]+ | <user\ ent=1>[^<]*<\/user> | me )
   \ *
   $
 """
@@ -108,9 +108,14 @@ proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
   else:
     rows.map(renderRatingRow).join("\n")
 
-proc getUser(bot: Bot, mention: string, user: Option[MessageEntity]
+proc getUser(bot: Bot,
+             mention: string,
+             `from`: User,
+             user: Option[MessageEntity]
             ): Option[User] =
-  if mention.startsWith '@':
+  if mention == "me":
+    some `from`
+  elif mention.startsWith '@':
     try:
       bot.db.searchUserByUid(mention[1..^1].parseInt.int32).map(toUser)
     except ValueError:
@@ -146,7 +151,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
 
     # /about @user
     html.match(is_about_user) ?-> match:
-      getUser(bot, match.captures["user"], entities.at 1) ?-> user:
+      getUser(bot, match.captures["user"], `from`, entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
         reply renderRowsAbout(user, rows)
       else:
@@ -155,7 +160,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
 
     # /about [by/del] @user
     html.match(is_about_cmd_user) ?-> match:
-      getUser(bot, match.captures["user"], entities.at 1) ?-> user:
+      getUser(bot, match.captures["user"], `from`, entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
           reply renderRowsBy(user, rows)
@@ -194,7 +199,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
       if chatId >= 0:
         reply texts.aboutCantAdd
         return
-      getUser(bot, match.captures["user"], entities.at 0) ?-> user:
+      getUser(bot, match.captures["user"], `from`, entities.at 0) ?-> user:
         readonly = false
         let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
         bot.db.rememberOpinion(chatId, `from`.id, user.id,

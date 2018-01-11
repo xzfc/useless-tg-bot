@@ -2,8 +2,9 @@ import strutils
 
 const
   aboutHelp* = unindent"""
-    Команды:
+    Примеры команд:
     @$1 -- сплетница
+    /about me
     /about @$1
     /about by @$1
     /about del @$1
