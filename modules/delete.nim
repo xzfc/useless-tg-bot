@@ -3,6 +3,7 @@ import ../db
 import ../sweet_options
 import ../telega/req
 import ../telega/types
+import ../texts
 import asyncdispatch
 import options
 
@@ -23,4 +24,4 @@ proc process*(bot: Bot, update: Update) {.async.} =
                                         origMsg.message_id)
         bot.db.forgetDeletable(origMsg.chat.id, origMsg.message_id)
       else:
-        asyncCheck bot.tg.reply(message, "не")
+        asyncCheck bot.tg.reply(message, texts.deleteNo)

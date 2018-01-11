@@ -3,8 +3,10 @@ import ../db
 import ../sweet_options
 import ../telega/req
 import ../telega/types
+import ../texts
 import ../utils/randomFuto
 import asyncdispatch
+import strutils
 
 proc process*(bot: Bot, update: Update) {.async.} =
   if update.isCommand(bot, "futo"):
@@ -17,7 +19,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
         # replyTo = lastFutoMessage # Not now
         replyTo = message.messageId
       else:
-        msg = "Я не видела тут " & futoName & "."
+        msg = texts.aboutUnknownUser % [futoName]
         replyTo = message.messageId
       asyncCheck bot.tg.sendMessage(message.chat.id,
                                     msg,

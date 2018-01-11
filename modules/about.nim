@@ -4,6 +4,7 @@ import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
+import ../texts
 import asyncdispatch
 import db_sqlite
 import json
@@ -44,15 +45,6 @@ let is_about_all = re r"""(*UTF8)(?x)
   rating
   \ *
   $
-"""
-
-let help = """
-Команды:
-@$1 -- сплетница
-/about @$1
-/about by @$1
-/about del @$1
-/about rating
 """
 
 proc htmlEscape(s: string): string =
@@ -101,19 +93,19 @@ proc renderRatingRow(row: OpinionRatingRow): string =
 
 proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
   if rows.len == 0:
-    "Ещё никто не говорил о $1." % [subj.fullName.htmlEscape]
+    texts.aboutNoAbout % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
 proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
   if rows.len == 0:
-    "$1 ещё ни о ком не говорил." % [subj.fullName.htmlEscape]
+    texts.aboutNoAboutBy % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
 proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
   if rows.len == 0:
-    "But nobody came."
+    texts.aboutEmptyRating
   else:
     rows.map(renderRatingRow).join("\n")
 
@@ -156,7 +148,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
         reply renderRowsAbout(user, rows), true
       else:
-        reply "Не видела тут $1." % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]], true
       return
     html.match(is_about_cmd_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
@@ -167,19 +159,19 @@ proc process*(bot: Bot, update: Update) {.async.} =
           let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
           if old.isSome:
             bot.db.forgetOpinion(chatId, `from`.id, user.id)
-            reply "Удалила!", false
+            reply texts.aboutDeleted, false
           else:
             reply "...", false
         return
       else:
-        reply "Не видела тут $1." % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]], true
       return
     html.match(is_about_all) ?-> match:
       let rows = bot.db.searchOpinionsRating(chatId)
       reply renderRatingRows(rows), true
       return
     if text == "/about":
-      reply help % [bot.me.username.unsafeGet], true
+      reply texts.aboutHelp % [bot.me.username.unsafeGet], true
       return
     reply "...", true
   else:
@@ -189,8 +181,8 @@ proc process*(bot: Bot, update: Update) {.async.} =
         bot.db.rememberOpinion(chatId, `from`.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
-          reply "Переписала!", false
+          reply texts.aboutUpdated, false
         else:
-          reply "Записала!", false
+          reply texts.aboutAdded, false
       else:
-        reply "Не видела тут $1." % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]], true
