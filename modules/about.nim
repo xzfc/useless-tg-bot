@@ -62,12 +62,6 @@ proc at[T](s: seq[T], idx: int): Option[T] =
   else:
     some(s[idx])
 
-proc renderTime(t: Time): string =
-  if t < 1514764800.Time:
-    ", 2017"
-  else:
-    ""
-
 proc fullName(user: DbUser): string =
   (if user.deleted: "†" else: "") & user.toUser.fullName.htmlEscape
 
@@ -77,36 +71,48 @@ proc fullNameRating(user: DbUser): string =
   else:
     "†" & user.toUser.fullName.htmlEscape & " @" & $user.id
 
-proc renderRow(row: OpinionRow): string =
-  "$1 — $2 <i>($3$4)</i>" % [
-    row.subj.fullName.htmlEscape,
-    row.text,
-    row.author.fullName.htmlEscape,
-    row.datetime.renderTime]
-
-proc renderRatingRow(row: OpinionRatingRow): string =
-  "<code>$1 $2</code> $3" % [
-    ($row.asSubj).align 2,
-    ($row.asAuthor).align 2,
-    row.user.fullNameRating]
-
 proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
+  proc renderTime(t: Time): string =
+    if t < 1514764800.Time:
+      ", 2017"
+    else:
+      ""
+  proc renderRow(row: OpinionRow): string =
+    "— $1 <i>($2$3)</i>" % [
+      row.text,
+      row.author.fullName.htmlEscape,
+      row.datetime.renderTime]
   if rows.len == 0:
     texts.aboutNoAbout % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
 proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
+  proc renderTime(t: Time): string =
+    if t < 1514764800.Time:
+      " <i>(2017)</i>"
+    else:
+      ""
+  proc renderRow(row: OpinionRow): string =
+    "$1 — $2$3" % [
+      row.subj.fullName.htmlEscape,
+      row.text,
+      row.datetime.renderTime]
   if rows.len == 0:
     texts.aboutNoAboutBy % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
 proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
+  proc renderRow(row: OpinionRatingRow): string =
+    "<code>$1 $2</code> $3" % [
+      ($row.asSubj).align 2,
+      ($row.asAuthor).align 2,
+      row.user.fullNameRating]
   if rows.len == 0:
     texts.aboutEmptyRating
   else:
-    rows.map(renderRatingRow).join("\n")
+    rows.map(renderRow).join("\n")
 
 proc getUser(bot: Bot,
              mention: string,
