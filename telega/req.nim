@@ -1,6 +1,7 @@
 import asyncdispatch
 import httpclient
 import json
+import options
 import ./parser
 import ./types
 
@@ -82,7 +83,7 @@ proc sendMessage*(this: Telega,
                   parseMode: string = "",
                   disableWebPagePreview: bool = false,
                   replyToMessageId: int = 0
-            ): Future[bool] {.async.} =
+                 ): Future[Option[Message]] {.async.} =
   var form = newMultiPartData()
   form["chat_id"] = $chatId
   form["text"] = text
@@ -94,19 +95,30 @@ proc sendMessage*(this: Telega,
     form["reply_to_message_id"] = $replyToMessageId
   let reply = await telegramMethod(this, "sendMessage", form)
   if reply.ok:
-    return true
+    return reply.result.parseMessage.some
   else:
     echo "sendMessage: " & reply.getErrorText
-    return false
+    return none(Message)
 
 proc reply*(this: Telega,
             msg: Message,
             text: string,
             parseMode: string = "",
             disableWebPagePreview: bool = false
-           ): Future[bool] =
+           ): Future[Option[Message]] =
   this.sendMessage(msg.chat.id,
                    text,
                    parseMode,
                    disableWebPagePreview,
                    msg.message_id.int)
+
+proc deleteMessage*(this: Telega,
+                    chatId: int64,
+                    messageId: int): Future[bool] {.async.} =
+  var form = newMultiPartData()
+  form["chat_id"] = $chatId
+  form["message_id"] = $messageId
+  let reply = await telegramMethod(this, "deleteMessage", form)
+  if not reply.ok:
+    echo "sendMessage: " & reply.getErrorText
+  return reply.ok

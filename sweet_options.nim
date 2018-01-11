@@ -77,3 +77,18 @@ macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
   assert IDENT.kind == nnkIdent
   assert BODY.kind == nnkStmtList
   return optionMatch(EXPR, IDENT, BODY, nil)
+
+template getOrBreak*[T](EXPR: Option[T]): auto =
+  let v = EXPR
+  if v.isNone:
+    break
+  v.get
+
+template getOrBreak*[T](EXPR: ref T): auto =
+  let v = EXPR
+  if v == nil:
+    break
+  v[]
+
+template `.?`*[T](EXPR: Option[T] | ref T, FIELD: untyped): auto =
+  EXPR.getOrBreak.FIELD

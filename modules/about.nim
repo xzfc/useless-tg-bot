@@ -127,11 +127,18 @@ proc getUser(bot: Bot, mention: string, user: Option[MessageEntity]
   else:
     some user.get.user
 
-template reply(text: string) =
-  asyncCheck bot.tg.reply(update.message.get,
-                          text,
-                          parseMode="HTML",
-                          disableWebPagePreview=true)
+proc reply2(bot: Bot, message: Message, text: string,
+            deletable: bool) {.async.} =
+  let reply = await bot.tg.reply(message,
+                                 text,
+                                 parseMode="HTML",
+                                 disableWebPagePreview=true)
+  if deletable:
+    reply ?-> reply:
+      bot.db.rememberDeletable(reply.chat.id, reply.messageId)
+
+template reply(text: string, deletable: bool) =
+  asyncCheck reply2(bot, message, text, deletable)
 
 proc process*(bot: Bot, update: Update) {.async.} =
   if (update.message?.text).isNone or (update.message?.`from`).isNone:
@@ -147,34 +154,34 @@ proc process*(bot: Bot, update: Update) {.async.} =
     html.match(is_about_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
-        reply renderRowsAbout(user, rows)
+        reply renderRowsAbout(user, rows), true
       else:
-        reply "Не видела тут $1." % [match.captures["user"]]
+        reply "Не видела тут $1." % [match.captures["user"]], true
       return
     html.match(is_about_cmd_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
-          reply renderRowsBy(user, rows)
+          reply renderRowsBy(user, rows), true
         else:
           let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
           if old.isSome:
             bot.db.forgetOpinion(chatId, `from`.id, user.id)
-            reply "Удалила!"
+            reply "Удалила!", false
           else:
-            reply "..."
+            reply "...", false
         return
       else:
-        reply "Не видела тут $1." % [match.captures["user"]]
+        reply "Не видела тут $1." % [match.captures["user"]], true
       return
     html.match(is_about_all) ?-> match:
       let rows = bot.db.searchOpinionsRating(chatId)
-      reply renderRatingRows(rows)
+      reply renderRatingRows(rows), true
       return
     if text == "/about":
-      reply help % [bot.me.username.unsafeGet]
+      reply help % [bot.me.username.unsafeGet], true
       return
-    reply "..."
+    reply "...", true
   else:
     render_entities(text, entities).match(is_re) ?-> match:
       getUser(bot, match.captures["user"], entities.at 0) ?-> user:
@@ -182,8 +189,8 @@ proc process*(bot: Bot, update: Update) {.async.} =
         bot.db.rememberOpinion(chatId, `from`.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
-          reply "Переписала!"
+          reply "Переписала!", false
         else:
-          reply "Записала!"
+          reply "Записала!", false
       else:
-        reply "Не видела тут $1." % [match.captures["user"]]
+        reply "Не видела тут $1." % [match.captures["user"]], true

@@ -133,6 +133,13 @@ proc init*(db: DbConn) =
       cluster_id INTEGER,
       PRIMARY KEY (chat_id)
     )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS deletable_messages (
+      chat_id    INTEGER,
+      message_id INTEGER,
+      datetime   DATETIME,
+      PRIMARY KEY (chat_id, message_id)
+    )"""
 
 proc rememberUser*(db: DbConn, user: User) =
   if user.username.isSome:
@@ -333,3 +340,32 @@ proc rememberChat*(db: DbConn, chatId: int64, name: string) =
                        WHERE chat_id = ?), ?))
   """
   db.execEx(query, chatId, name, chatId, chatId)
+
+################################################################################
+
+proc rememberDeletable*(db: DbConn, chatId: int64, messageId: int) =
+  const query = sql"""
+    INSERT
+      INTO deletable_messages
+    VALUES (?, ?, CAST(STRFTIME('%s', 'now') AS INT))
+  """
+  db.execEx(query, chatId, messageId)
+
+proc forgetDeletable*(db: DbConn, chatId: int64, messageId: int) =
+  const query = sql"""
+    DELETE
+      FROM deletable_messages
+     WHERE chat_id = ?
+       AND message_id = ?
+  """
+  db.execEx(query, chatId, messageId)
+
+proc haveDeletable*(db: DbConn, chatId: int64, messageId: int): bool =
+  const query = sql"""
+    SELECT 1
+      FROM deletable_messages
+     WHERE chat_id = ?
+       AND message_id = ?
+     LIMIT 1
+  """
+  db.optionalRow(query, chatId, messageId).isSome

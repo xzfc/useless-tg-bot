@@ -172,3 +172,6 @@ proc parseUpdates*(node: JsonNode): seq[Update] =
 
 proc parseUser*(node: JsonNode): User =
   node.parseNode result
+
+proc parseMessage*(node: JsonNode): Message =
+  node.parseNode result
