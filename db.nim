@@ -361,6 +361,20 @@ proc rememberChat*(db: DbConn, chatId: int64, name: string) =
   """
   db.execEx(query, chatId, name, chatId, chatId)
 
+proc rememberChatUser*(db: DbConn, userId: int64, name: string, chatId: int64) =
+  const query = sql"""
+    INSERT OR REPLACE
+      INTO chats
+    VALUES (?, ?, (SELECT cluster_id FROM chats WHERE chat_id = ?))
+  """
+  db.execEx(query, userId, name, chatId)
+
+proc forgetChatUser*(db: DbConn, userId: int64) =
+  const query = sql"""
+    DELETE FROM chats
+     WHERE chat_id = ?
+  """
+  db.execEx(query, userId)
 
 ##
 ## deletable_messages

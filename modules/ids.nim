@@ -10,13 +10,16 @@ import sequtils
 proc rememberUsers(bot: Bot, update: Update) =
   proc handleUser(user: User) =
     bot.db.rememberUser user
+  proc handleUsers(users: seq[User]) =
+    for user in users:
+      handleUser user
   proc handleEntity(entity: MessageEntity) =
     if entity.`type` == metTextMention:
       bot.db.rememberUser entity.user
   proc handleMessage(msg: Message) =
     msg.`from`.map         handleUser
     msg.forwardFrom.map    handleUser
-    msg.newChatMember.map  handleUser
+    msg.newChatMembers.map handleUsers
     msg.leftChatMember.map handleUser
     if msg.entities.isSome:
       for entity in msg.entities.get:
@@ -37,16 +40,21 @@ proc rememberLast(bot: Bot, update: Update) =
                                    message.`from`.getOrBreak.id,
                                    message.messageId)
 
-proc getTitle(message: Message): string =
-  block:
-    return message.chat.title.getOrBreak
-  block:
-    return message.from.getOrBreak.fullName
-  return "Unknown"
-
 proc rememberChat(bot: Bot, update: Update) =
   update.message ?-> message:
-    bot.db.rememberChat(message.chat.id, message.getTitle)
+    if message.chat.id >= 0:
+      return
+    let chatTitle = message.chat.title.get("Unknown")
+    # Remember group
+    bot.db.rememberChat(message.chat.id, chatTitle)
+    message.`from` ?-> user:
+      # Assign user to current cluster
+      bot.db.rememberChatUser(user.id,
+                              user.fullName &  " @ " & chatTitle,
+                              message.chat.id)
+    message.leftChatMember ?-> user:
+      # Remove user from cluster
+      bot.db.forgetChatUser(user.id)
 
 proc process*(bot: Bot, update: Update) {.async.} =
   rememberUsers(bot, update)

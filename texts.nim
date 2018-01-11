@@ -16,5 +16,7 @@ const
   aboutNoAbout*     = "Ещё никто не говорил о $1."
   aboutNoAboutBy*   = "$1 ещё ни о ком не говорил."
   aboutUnknownUser* = "Не видела тут $1."
+  aboutCantAdd*     = "Добавлять записи можно только в группе."
+  aboutCantDelete*  = "Удалять записи можно только в группе."
 
   deleteNo*         = "не"

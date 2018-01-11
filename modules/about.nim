@@ -128,8 +128,8 @@ proc reply2(bot: Bot, message: Message, text: string,
     reply ?-> reply:
       bot.db.rememberDeletable(reply.chat.id, reply.messageId)
 
-template reply(text: string, deletable: bool) =
-  asyncCheck reply2(bot, message, text, deletable)
+template reply(text: string) =
+  asyncCheck reply2(bot, message, text, readonly)
 
 proc process*(bot: Bot, update: Update) {.async.} =
   if (update.message?.text).isNone or (update.message?.`from`).isNone:
@@ -140,6 +140,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
   let text = message.text.get
   let entities = message.entities ?: @[]
   let html = render_entities(text, entities)
+  var readonly = true
 
   if update.isCommand(bot, "about"):
 
@@ -147,9 +148,9 @@ proc process*(bot: Bot, update: Update) {.async.} =
     html.match(is_about_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
-        reply renderRowsAbout(user, rows), true
+        reply renderRowsAbout(user, rows)
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]]
       return
 
     # /about [by/del] @user
@@ -157,43 +158,50 @@ proc process*(bot: Bot, update: Update) {.async.} =
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
-          reply renderRowsBy(user, rows), true
-        else:
+          reply renderRowsBy(user, rows)
+        elif chatId < 0:
+          readonly = false
           let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
           if old.isSome:
             bot.db.forgetOpinion(chatId, `from`.id, user.id)
-            reply texts.aboutDeleted, false
+            reply texts.aboutDeleted
           else:
-            reply "...", false
+            reply "..."
+        else:
+          reply texts.aboutCantDelete
         return
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]]
       return
 
     # /about rating
     html.match(is_about_all) ?-> match:
       discard match
       let rows = bot.db.searchOpinionsRating(chatId)
-      reply renderRatingRows(rows), true
+      reply renderRatingRows(rows)
       return
 
     # /about
     if not text.contains(' '):
-      reply texts.aboutHelp % [bot.me.username.unsafeGet], true
+      reply texts.aboutHelp % [bot.me.username.unsafeGet]
       return
 
-    reply "...", true
+    reply "..."
 
   else:
     # @user -- blabla
     render_entities(text, entities).match(is_re) ?-> match:
+      if chatId >= 0:
+        reply texts.aboutCantAdd
+        return
       getUser(bot, match.captures["user"], entities.at 0) ?-> user:
+        readonly = false
         let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
         bot.db.rememberOpinion(chatId, `from`.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
-          reply texts.aboutUpdated, false
+          reply texts.aboutUpdated
         else:
-          reply texts.aboutAdded, false
+          reply texts.aboutAdded
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]], true
+        reply texts.aboutUnknownUser % [match.captures["user"]]
