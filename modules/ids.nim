@@ -1,8 +1,8 @@
 import ../bot
 import ../db
 import ../sweet_options
-import ../telega/types
 import ../telega/html
+import ../telega/types
 import asyncdispatch
 import options
 import sequtils
@@ -31,17 +31,17 @@ proc rememberUsers(bot: Bot, update: Update) =
   update.editedChannelPost.map handleMessage
 
 proc rememberLast(bot: Bot, update: Update) =
-  update.message ?-> message:
-    message.`from` ?-> from0:
-      bot.db.rememberLastUserMessage(message.chat.id,
-                                     from0.id,
-                                     message.messageId)
+  block:
+    let message = update.message.getOrBreak
+    bot.db.rememberLastUserMessage(message.chat.id,
+                                   message.`from`.getOrBreak.id,
+                                   message.messageId)
 
 proc getTitle(message: Message): string =
-  message.chat.title ?-> t:
-    return t
-  message.from ?-> user:
-    return user.fullName
+  block:
+    return message.chat.title.getOrBreak
+  block:
+    return message.from.getOrBreak.fullName
   return "Unknown"
 
 proc rememberChat(bot: Bot, update: Update) =

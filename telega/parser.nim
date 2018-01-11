@@ -87,7 +87,7 @@ proc parseNode[T](node: JsonNode, res: var seq[T]) =
 proc parseNode(node: JsonNode, res: var bool) =
   node.assertKind JBool
   res = node.getBVal()
-    
+
 proc parseNode(node: JsonNode, res: var string) =
   node.assertKind JString
   res = node.getStr()

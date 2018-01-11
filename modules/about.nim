@@ -48,14 +48,13 @@ let is_about_all = re r"""(*UTF8)(?x)
 """
 
 proc htmlEscape(s: string): string =
-  result = ""
-  for c in items(s):
+  result = newStringOfCap s.len
+  for c in s.items:
     case c
-    of '<': add(result, "&lt;")
-    of '>': add(result, "&gt;")
-    of '&': add(result, "&amp;")
-    else:   add(result, c)
-  return result
+    of '<': result.add "&lt;"
+    of '>': result.add "&gt;"
+    of '&': result.add "&amp;"
+    else:   result.add c
 
 proc at[T](s: seq[T], idx: int): Option[T] =
   if idx < 0 or idx >= s.len:
@@ -70,7 +69,7 @@ proc renderTime(t: Time): string =
     ""
 
 proc fullName(user: DbUser): string =
-  (if user.deleted: "†" else: "") & user.toUser.fullName.htmlEscape 
+  (if user.deleted: "†" else: "") & user.toUser.fullName.htmlEscape
 
 proc fullNameRating(user: DbUser): string =
   if not user.deleted:
@@ -143,6 +142,8 @@ proc process*(bot: Bot, update: Update) {.async.} =
   let html = render_entities(text, entities)
 
   if update.isCommand(bot, "about"):
+
+    # /about @user
     html.match(is_about_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
@@ -150,6 +151,8 @@ proc process*(bot: Bot, update: Update) {.async.} =
       else:
         reply texts.aboutUnknownUser % [match.captures["user"]], true
       return
+
+    # /about [by/del] @user
     html.match(is_about_cmd_user) ?-> match:
       getUser(bot, match.captures["user"], entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
@@ -166,15 +169,23 @@ proc process*(bot: Bot, update: Update) {.async.} =
       else:
         reply texts.aboutUnknownUser % [match.captures["user"]], true
       return
+
+    # /about rating
     html.match(is_about_all) ?-> match:
+      discard match
       let rows = bot.db.searchOpinionsRating(chatId)
       reply renderRatingRows(rows), true
       return
-    if text == "/about":
+
+    # /about
+    if not text.contains(' '):
       reply texts.aboutHelp % [bot.me.username.unsafeGet], true
       return
+
     reply "...", true
+
   else:
+    # @user -- blabla
     render_entities(text, entities).match(is_re) ?-> match:
       getUser(bot, match.captures["user"], entities.at 0) ?-> user:
         let old = bot.db.searchOpinion(chatId, `from`.id, user.id)

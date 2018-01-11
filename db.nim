@@ -34,7 +34,7 @@ proc allRows(db: DbConn, query: SqlQuery,
 proc optionalRow(db: DbConn, query: SqlQuery,
       args: varargs[DbValue, dbValue]): Option[Row] =
   let a = db.allRows(query, args)
-  if a.len() == 0:
+  if a.len == 0:
     return none(Row)
   else:
     return some(a[0])
@@ -141,6 +141,11 @@ proc init*(db: DbConn) =
       PRIMARY KEY (chat_id, message_id)
     )"""
 
+
+##
+## users
+##
+
 proc rememberUser*(db: DbConn, user: User) =
   if user.username.isSome:
     db.execEx sql"""
@@ -187,6 +192,11 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[DbUser] =
   """
   return db.optionalRow(query, uname).map(getUser)
 
+
+##
+## opinions
+##
+
 proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
                               subjUid: int): seq[OpinionRow] =
   const query = sql"""
@@ -228,7 +238,7 @@ proc searchOpinionsRating*(db: DbConn, chatId: int64): seq[OpinionRatingRow] =
                        GROUP BY o.author_uid)
                   AS a
                   ON a.uid = u.uid
-         
+
            LEFT JOIN (SELECT subj_uid AS uid, count() AS c
                         FROM opinions AS o
                              INNER JOIN chats g ON g.cluster_id = o.cluster_id
@@ -282,6 +292,10 @@ proc searchOpinion*(db: DbConn, chatId: int64,
   return db.optionalRow(query, chatId, authorUid, subjUid).map(getOpinionRow)
 
 
+##
+## markov
+##
+
 proc rememberMarkov*(db: DbConn, chatId: int64, wordFrom, wordTo: string) =
   const query1 = sql"""
     INSERT OR IGNORE
@@ -308,7 +322,10 @@ proc markovGetNext*(db: DbConn, chatId: int64, wordFrom: string
   """
   db.allRows(query, chatId, wordFrom).map(getMarkovNextRow)
 
-################################################################################
+
+##
+## last_user_message
+##
 
 proc rememberLastUserMessage*(db: DbConn, chatId: int64, userId: int,
                               messageId: int) =
@@ -328,7 +345,10 @@ proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
   """
   db.optionalRow(query, chatId, userId).map(get_0int)
 
-################################################################################
+
+##
+## chats
+##
 
 proc rememberChat*(db: DbConn, chatId: int64, name: string) =
   const query = sql"""
@@ -341,7 +361,10 @@ proc rememberChat*(db: DbConn, chatId: int64, name: string) =
   """
   db.execEx(query, chatId, name, chatId, chatId)
 
-################################################################################
+
+##
+## deletable_messages
+##
 
 proc rememberDeletable*(db: DbConn, chatId: int64, messageId: int) =
   const query = sql"""

@@ -17,6 +17,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
       bot.db.getLastUserMessage(message.chat.id, 194630356) ?-> lastFutoMessage:
         msg = futoName
         # replyTo = lastFutoMessage # Not now
+        discard lastFutoMessage
         replyTo = message.messageId
       else:
         msg = texts.aboutUnknownUser % [futoName]

@@ -1,6 +1,6 @@
-import unicode
-import sequtils
 import random
+import sequtils
+import unicode
 
 proc runes0(f: string): seq[Rune] =
   toRunes(f)

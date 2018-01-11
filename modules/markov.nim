@@ -70,7 +70,6 @@ proc generatePhrase(db: DbConn, chatId: int64, start: string, maxLen: int
 proc process*(bot: Bot, update: Update) {.async.} =
   update.message ?-> message:
     message.text ?-> text:
-      let startWord: string = nil
       if not text.startsWith("/"):
         bot.learn(message.chat.id, text)
       text.match(reQuestion) ?-> match:
