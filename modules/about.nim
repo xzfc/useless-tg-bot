@@ -39,10 +39,10 @@ let is_about_cmd_user = re r"""(*UTF8)(?x)
   $
 """
 
-let is_about_all = re r"""(*UTF8)(?x)
+let is_about_cmd = re r"""(*UTF8)(?x)
   /[@a-zA-Z_]+
   \ +
-  rating
+  (?<cmd>rating|latest)
   \ *
   $
 """
@@ -100,6 +100,23 @@ proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
       row.datetime.renderTime]
   if rows.len == 0:
     texts.aboutNoAboutBy % [subj.fullName.htmlEscape]
+  else:
+    rows.map(renderRow).join("\n")
+
+proc renderLatestRows(rows: seq[OpinionRow]): string =
+  proc renderTime(t: Time): string =
+    if t < 1514764800.Time:
+      ", 2017"
+    else:
+      ""
+  proc renderRow(row: OpinionRow): string =
+    "$1 — $2 <i>($3$4)</i>" % [
+      row.subj.fullName.htmlEscape,
+      row.text,
+      row.author.fullName.htmlEscape,
+      row.datetime.renderTime]
+  if rows.len == 0:
+    texts.aboutEmptyRating
   else:
     rows.map(renderRow).join("\n")
 
@@ -185,11 +202,14 @@ proc process*(bot: Bot, update: Update) {.async.} =
         reply texts.aboutUnknownUser % [match.captures["user"]]
       return
 
-    # /about rating
-    html.match(is_about_all) ?-> match:
-      discard match
-      let rows = bot.db.searchOpinionsRating(chatId)
-      reply renderRatingRows(rows)
+    # /about [rating/latest]
+    html.match(is_about_cmd) ?-> match:
+      if match.captures["cmd"] == "rating":
+        let rows = bot.db.searchOpinionsRating(chatId)
+        reply renderRatingRows(rows)
+      else:
+        let rows = bot.db.searchOpinionsLatest(chatId, 10)
+        reply renderLatestRows(rows)
       return
 
     # /about

@@ -202,9 +202,9 @@ proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
   const query = sql"""
     SELECT a.*, s.*, o.text, o.datetime
       FROM opinions AS o
-           INNER JOIN chats g ON g.cluster_id = o.cluster_id
-           INNER JOIN users a ON a.uid = o.author_uid
-           INNER JOIN users s ON s.uid = o.subj_uid
+           INNER JOIN chats AS g ON g.cluster_id = o.cluster_id
+           INNER JOIN users AS a ON a.uid = o.author_uid
+           INNER JOIN users AS s ON s.uid = o.subj_uid
      WHERE g.chat_id = ?
        AND o.subj_uid = ?
      ORDER BY datetime DESC
@@ -216,7 +216,7 @@ proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
   const query = sql"""
     SELECT a.*, s.*, o.text, o.datetime
       FROM opinions AS o
-           INNER JOIN chats g ON g.cluster_id = o.cluster_id
+           INNER JOIN chats AS g ON g.cluster_id = o.cluster_id
            INNER JOIN users AS a ON a.uid = o.author_uid
            INNER JOIN users AS s ON s.uid = o.subj_uid
      WHERE g.chat_id = ?
@@ -224,6 +224,20 @@ proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
      ORDER BY datetime DESC
   """
   return db.allRows(query, chatId, authorUid).map(getOpinionRow)
+
+proc searchOpinionsLatest*(db: DbConn, chatId: int64,
+                           limit: int): seq[OpinionRow] =
+  const query = sql"""
+    SELECT a.*, s.*, o.text, o.datetime
+      FROM opinions AS o
+           INNER JOIN chats AS g ON g.cluster_id = o.cluster_id
+           INNER JOIN users AS a ON a.uid = o.author_uid
+           INNER JOIN users AS s ON s.uid = o.subj_uid
+     WHERE g.chat_id = ?
+     ORDER BY datetime DESC
+     LIMIT ?
+  """
+  return db.allRows(query, chatId, limit).map(getOpinionRow)
 
 proc searchOpinionsRating*(db: DbConn, chatId: int64): seq[OpinionRatingRow] =
   # TODO: use only one INNER JOIN?
