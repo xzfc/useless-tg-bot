@@ -14,10 +14,10 @@ proc rememberUsers(bot: Bot, update: Update) =
     for user in users:
       handleUser user
   proc handleEntity(entity: MessageEntity) =
-    if entity.`type` == metTextMention:
+    if entity.kind == meTextMention:
       bot.db.rememberUser entity.user
   proc handleMessage(msg: Message) =
-    msg.`from`.map         handleUser
+    msg.fromUser.map         handleUser
     msg.forwardFrom.map    handleUser
     msg.newChatMembers.map handleUsers
     msg.leftChatMember.map handleUser
@@ -37,7 +37,7 @@ proc rememberLast(bot: Bot, update: Update) =
   block:
     let message = update.message.getOrBreak
     bot.db.rememberLastUserMessage(message.chat.id,
-                                   message.`from`.getOrBreak.id,
+                                   message.fromUser.getOrBreak.id,
                                    message.messageId)
 
 proc rememberChat(bot: Bot, update: Update) =
@@ -47,7 +47,7 @@ proc rememberChat(bot: Bot, update: Update) =
     let chatTitle = message.chat.title.get("Unknown")
     # Remember group
     bot.db.rememberChat(message.chat.id, chatTitle)
-    message.`from` ?-> user:
+    message.fromUser ?-> user:
       # Assign user to current cluster
       bot.db.rememberChatUser(user.id,
                               user.fullName &  " @ " & chatTitle,

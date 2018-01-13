@@ -14,24 +14,24 @@ proc render_entities*(text: string, entities: seq[MessageEntity]): string =
 
   proc apply_ent(result: var string) =
     if ent < entities.len and inside and pos == entities[ent].offset + entities[ent].length:
-      case entities[ent].`type`:
-      of metItalic:      result.add "</i>"
-      of metBold:        result.add "</b>"
-      of metCode:        result.add "</code>"
-      of metPre:         result.add "</pre>"
-      of metTextLink:    discard # TODO # result.add "<a href=\""  "\">"
-      of metTextMention: result.add "</user>"
+      case entities[ent].kind:
+      of meItalic:      result.add "</i>"
+      of meBold:        result.add "</b>"
+      of meCode:        result.add "</code>"
+      of mePre:         result.add "</pre>"
+      of meTextLink:    discard # TODO # result.add "<a href=\""  "\">"
+      of meTextMention: result.add "</user>"
       else: discard
       inside = false
       inc ent
     if ent < entities.len and not inside and pos == entities[ent].offset:
-      case entities[ent].`type`:
-      of metItalic:      result.add "<i>"
-      of metBold:        result.add "<b>"
-      of metCode:        result.add "<code>"
-      of metPre:         result.add "<pre>"
-      of metTextLink:    discard # TODO # result.add "<a href=\""  "\">"
-      of metTextMention: result.add "<user ent=" & $ent & ">"
+      case entities[ent].kind:
+      of meItalic:      result.add "<i>"
+      of meBold:        result.add "<b>"
+      of meCode:        result.add "<code>"
+      of mePre:         result.add "<pre>"
+      of meTextLink:    discard # TODO # result.add "<a href=\""  "\">"
+      of meTextMention: result.add "<user ent=" & $ent & ">"
       else: discard
       inside = true
 
@@ -82,12 +82,12 @@ proc isDeleted*(user: User): bool =
 
 
 proc bold(offset, length: int32): MessageEntity =
-  result.`type` = metBold
+  result.kind = meBold
   result.offset = offset
   result.length = length
 
 proc user(offset, length: int32): MessageEntity =
-  result.`type` = metTextMention
+  result.kind = meTextMention
   result.offset = offset
   result.length = length
   result.user.id = 123

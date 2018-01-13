@@ -17,7 +17,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
     block:
       let message = update.message.getOrBreak
       let origMsg = message.reply_to_message.getOrBreak
-      if (origMsg.from.?id) != bot.me.id:
+      if (origMsg.fromUser.?id) != bot.me.id:
         break
       if bot.db.haveDeletable(origMsg.chat.id, origMsg.message_id):
         asyncCheck bot.tg.deleteMessage(origMsg.chat.id,

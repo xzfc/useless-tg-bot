@@ -1,16 +1,16 @@
 import options
 
 type
-  ChatType* = enum
-    ctPrivate
-    ctGroup
-    ctSupergroup
-    ctChannel
-    ctUnknown
+  ChatKind* = enum
+    cPrivate
+    cGroup
+    cSupergroup
+    cChannel
+    cUnknown
 
   Chat* = object
     id                          *: int64
-    `type`                      *: ChatType
+    kind                        *: ChatKind
     title                       *: Option[string]
     username                    *: Option[string]
     firstName                   *: Option[string]
@@ -19,7 +19,7 @@ type
 
   User* = object
     id           *: int32
-    is_bot       *: bool
+    isBot        *: bool
     firstName    *: string
     lastName     *: Option[string]
     username     *: Option[string]
@@ -37,7 +37,7 @@ type
     height   *: uint
     thumb    *: Option[PhotoSize]
     emoji    *: Option[string]
-    set_name *: Option[string]
+    setName  *: Option[string]
     fileSize *: Option[uint]
 
   Document* = object
@@ -48,33 +48,33 @@ type
     fileSize *: Option[uint]
 
   MessageEntityType* = enum
-    metMention
-    metHashtag
-    metBotCommand
-    metUrl
-    metEmail
-    metBold
-    metItalic
-    metCode
-    metPre
-    metTextLink
-    metTextMention
-    metUnknown
+    meMention
+    meHashtag
+    meBotCommand
+    meUrl
+    meEmail
+    meBold
+    meItalic
+    meCode
+    mePre
+    meTextLink
+    meTextMention
+    meUnknown
 
   MessageEntity* = object
     offset *: int32
     length *: int32
-    case `type` *: MessageEntityType
-    of metTextLink:
+    case kind *: MessageEntityType
+    of meTextLink:
       url  *: string
-    of metTextMention:
+    of meTextMention:
       user *: User
     else:
       discard
 
   Message* = object
     messageId             *: int32
-    `from`                *: Option[User]
+    fromUser              *: Option[User]
     date                  *: int32
     chat                  *: Chat
     forwardFrom           *: Option[User]
@@ -97,10 +97,7 @@ type
     #contact              *: Option[Contact]
     #location             *: Option[Location]
     #venue                *: Option[Venue]
-    newChatMember         *: Option[User] # undocumented
-    newChatParticipant    *: Option[User] # undocumented
     newChatMembers        *: Option[seq[User]]
-    leftChatParticipant   *: Option[User] # undocumented
     leftChatMember        *: Option[User]
     newChatTitle          *: Option[string]
     newChatPhoto          *: Option[seq[PhotoSize]]

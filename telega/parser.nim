@@ -1,24 +1,28 @@
-import options
-import sets
-import typetraits
-import tables
-import macros
-import strutils
-import sequtils
-import json
 import ./types
+import json
+import options
+import strutils
+import tables
+import typetraits
 
 type TelegaParsingError* = object of ValueError
 
-proc telegaNormalize(s: string): string =
+proc telegaNormalize(s: string, chomp: bool = false): string =
   ## Convert camelCase to snake_case.
   result = ""
+  var ignore = chomp
   for c in s:
-    if c in {'A' .. 'Z'}:
-      result.add('_')
+    if c in 'A'..'Z':
+      if not ignore:
+        result.add('_')
       result.add(c.toLowerAscii)
-    else:
+      ignore = false
+    elif not ignore:
       result.add(c)
+  if result == "kind":
+    result = "type"
+  if result == "from_user":
+    result = "from"
 
 proc assertKind(node: JsonNode, kind: JsonNodeKind) =
   if isNil(node) or node.kind != kind:
@@ -30,148 +34,57 @@ proc get(node: JsonNode, name: string): JsonNode =
   else:
     nil
 
-macro generateParseNode(T: typedesc): untyped =
-  proc mkStringLit(sym: NimNode): NimNode =
-    newStrLitNode(telegaNormalize($sym))
-
-  proc mkParseNode(sym: NimNode): NimNode {.compileTime.} =
-    let lit = newStrLitNode(telegaNormalize($sym))
-    quote do:
-      node.get(`lit`).parseNode res.`sym`
-
-  let typeNode = T.getType
-  expectKind(typeNode, nnkBracketExpr)
-  doAssert(($typeNode[0]).normalize == "typedesc")
-  expectKind(typeNode[1], nnkSym)
-  let keys = typeNode[1].getType[2].toSeq()
-
-  let keyNames = newNimNode(nnkBracket).add(keys.map(mkStringLit))
-
-  let assertStmt = quote do:
-    node.assertKind JObject
-    const validKeys = toSet(`keyNames`)
-    for p in node.pairs:
-      if not validKeys.contains(p.key):
-        echo "Warning: unexpected key " & p.key & " at " & `T`.name
-
-
-  let parseStatements = keys.map(mkParseNode)
-  newStmtList(assertStmt).add(parseStatements)
-
-proc parseNode(node: JsonNode, res: var string)
-
-proc parseNode[T](node: JsonNode, res: var Option[T]) =
-  if isNil(node):
-    res = none(T)
+proc unmarshal(node: JsonNode, T: typedesc): T =
+  when T is enum | ref | seq | Option:
+    parseNode(node, result)
+  elif T is bool:   node.parsePrimitive(JBool,   getBVal, bool)
+  elif T is int32:  node.parsePrimitive(JInt,    getNum,  int32)
+  elif T is int64:  node.parsePrimitive(JInt,    getNum,  int64)
+  elif T is uint:   node.parsePrimitive(JInt,    getNum,  uint)
+  elif T is string: node.parsePrimitive(JString, getStr,  string)
   else:
-    var res1: T
-    node.parseNode res1
-    res = some(res1)
+    for a, b in result.fieldPairs:
+      b = unmarshal(node.get a.telegaNormalize, b.type)
 
-proc parseNode[T](node: JsonNode, res: var ref T) =
-  if isNil(node):
-    res = nil
-  else:
-    new(res)
-    node.parseNode res[]
+template parsePrimitive(node: JsonNode, kind: JsonNodeKind,
+                        getWhat: untyped, T: untyped): untyped =
+  node.assertKind kind
+  node.getWhat.T
 
 proc parseNode[T](node: JsonNode, res: var seq[T]) =
   node.assertKind JArray
   let elems = node.getElems
   res = newSeq[T](elems.len)
-  var i = 0
-  for elem in elems:
-    elem.parseNode res[i]
-    inc i
+  for i in 0..elems.len-1:
+    res[i] = unmarshal(elems[i], T)
 
-proc parseNode(node: JsonNode, res: var bool) =
-  node.assertKind JBool
-  res = node.getBVal()
+proc parseNode[T](node: JsonNode, res: var Option[T]) =
+  if node.isNil:
+    res = none(T)
+  else:
+    res = unmarshal(node, T).some
 
-proc parseNode(node: JsonNode, res: var string) =
+proc parseNode[T](node: JsonNode, res: var ref T) =
+  if node.isNil:
+    res = nil
+  else:
+    new(res)
+    res[] = unmarshal(node, T)
+
+proc parseNode[T: enum](node: JsonNode, res: var T) =
   node.assertKind JString
-  res = node.getStr()
-
-proc parseNode(node: JsonNode, res: var int32) =
-  node.assertKind JInt
-  res = node.getNum().int32
-
-proc parseNode(node: JsonNode, res: var int64) =
-  node.assertKind JInt
-  res = node.getNum().int64
-
-proc parseNode(node: JsonNode, res: var uint) =
-  node.assertKind JInt
-  res = node.getNum().uint
-
-proc parseNode(node: JsonNode, res: var ChatType) =
-  node.assertKind JString
-  case node.getStr()
-  of "private":    res = ctPrivate
-  of "group":      res = ctGroup
-  of "supergroup": res = ctSupergroup
-  of "channel":    res = ctChannel
-  else:            res = ctUnknown
-
-proc parseNode(node: JsonNode, res: var MessageEntityType) =
-  node.assertKind JString
-  case node.getStr()
-  of "mention":      res = metMention
-  of "hashtag":      res = metHashtag
-  of "bot_command":  res = metBotCommand
-  of "url":          res = metUrl
-  of "email":        res = metEmail
-  of "bold":         res = metBold
-  of "italic":       res = metItalic
-  of "code":         res = metCode
-  of "pre":          res = metPre
-  of "text_link":    res = metTextLink
-  of "text_mention": res = metTextMention
-  else:              res = metUnknown
-
-proc parseNode(node: JsonNode, res: var Chat) =
-  generateParseNode Chat
-
-proc parseNode(node: JsonNode, res: var User) =
-  generateParseNode User
-
-proc parseNode(node: JsonNode, res: var PhotoSize) =
-  generateParseNode PhotoSize
-
-proc parseNode(node: JsonNode, res: var Sticker) =
-  generateParseNode Sticker
-
-proc parseNode(node: JsonNode, res: var Document) =
-  generateParseNode Document
-
-proc parseNode(node: JsonNode, res: var MessageEntity) =
-  node.assertKind JObject
-  reset res
-  var `type`: MessageEntityType
-  node.get("type").parseNode   `type`
-  res.`type` = `type`
-  node.get("offset").parseNode res.offset
-  node.get("length").parseNode res.length
-  case `type`:
-    of metTextLink:    node.get("url").parseNode  res.url
-    of metTextMention: node.get("user").parseNode res.user
-    else: discard
-
-proc parseNode(node: JsonNode, res: var Message) =
-  generateParseNode Message
-
-proc parseNode(node: JsonNode, res: var Update) =
-  generateParseNode Update
+  let s = node.getStr()
+  res = high(T)
+  for i in low(T)..high(T).pred:
+    if s == ($i).telegaNormalize(true):
+      res = i
+      break
 
 proc parseUpdates*(node: JsonNode): seq[Update] =
-  #try:
-    node.parseNode result
-  #except:
-  #  echo getCurrentExceptionMsg()
-  #  result = @[]
+  node.unmarshal seq[Update]
 
 proc parseUser*(node: JsonNode): User =
-  node.parseNode result
+  node.unmarshal User
 
 proc parseMessage*(node: JsonNode): Message =
-  node.parseNode result
+  node.unmarshal Message

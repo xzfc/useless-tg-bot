@@ -133,11 +133,11 @@ proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
 
 proc getUser(bot: Bot,
              mention: string,
-             `from`: User,
+             fromUser: User,
              user: Option[MessageEntity]
             ): Option[User] =
   if mention == "me":
-    some `from`
+    some fromUser
   elif mention.startsWith '@':
     try:
       bot.db.searchUserByUid(mention[1..^1].parseInt.int32).map(toUser)
@@ -160,11 +160,11 @@ template reply(text: string) =
   asyncCheck reply2(bot, message, text, readonly)
 
 proc process*(bot: Bot, update: Update) {.async.} =
-  if (update.message?.text).isNone or (update.message?.`from`).isNone:
+  if (update.message?.text).isNone or (update.message?.fromUser).isNone:
     return
   let message = update.message.get
   let chatId = message.chat.id
-  let `from` = message.`from`.get
+  let fromUser = message.fromUser.get
   let text = message.text.get
   let entities = message.entities ?: @[]
   let html = render_entities(text, entities)
@@ -174,7 +174,7 @@ proc process*(bot: Bot, update: Update) {.async.} =
 
     # /about @user
     html.match(is_about_user) ?-> match:
-      getUser(bot, match.captures["user"], `from`, entities.at 1) ?-> user:
+      getUser(bot, match.captures["user"], fromUser, entities.at 1) ?-> user:
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
         reply renderRowsAbout(user, rows)
       else:
@@ -183,15 +183,15 @@ proc process*(bot: Bot, update: Update) {.async.} =
 
     # /about [by/del] @user
     html.match(is_about_cmd_user) ?-> match:
-      getUser(bot, match.captures["user"], `from`, entities.at 1) ?-> user:
+      getUser(bot, match.captures["user"], fromUser, entities.at 1) ?-> user:
         if match.captures["cmd"] == "by":
           let rows = bot.db.searchOpinionsByAuthorUid(chatId, user.id)
           reply renderRowsBy(user, rows)
         elif chatId < 0:
           readonly = false
-          let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
+          let old = bot.db.searchOpinion(chatId, fromUser.id, user.id)
           if old.isSome:
-            bot.db.forgetOpinion(chatId, `from`.id, user.id)
+            bot.db.forgetOpinion(chatId, fromUser.id, user.id)
             reply texts.aboutDeleted
           else:
             reply "..."
@@ -225,10 +225,10 @@ proc process*(bot: Bot, update: Update) {.async.} =
       if chatId >= 0:
         reply texts.aboutCantAdd
         return
-      getUser(bot, match.captures["user"], `from`, entities.at 0) ?-> user:
+      getUser(bot, match.captures["user"], fromUser, entities.at 0) ?-> user:
         readonly = false
-        let old = bot.db.searchOpinion(chatId, `from`.id, user.id)
-        bot.db.rememberOpinion(chatId, `from`.id, user.id,
+        let old = bot.db.searchOpinion(chatId, fromUser.id, user.id)
+        bot.db.rememberOpinion(chatId, fromUser.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
           reply texts.aboutUpdated
