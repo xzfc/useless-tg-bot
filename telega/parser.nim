@@ -42,6 +42,7 @@ proc unmarshal(node: JsonNode, T: typedesc): T =
   elif T is int64:  node.parsePrimitive(JInt,    getNum,  int64)
   elif T is uint:   node.parsePrimitive(JInt,    getNum,  uint)
   elif T is string: node.parsePrimitive(JString, getStr,  string)
+  elif T is float:  0.float # FIXME
   else:
     for a, b in result.fieldPairs:
       b = unmarshal(node.get a.telegaNormalize, b.type)
