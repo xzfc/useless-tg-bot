@@ -55,6 +55,8 @@ proc get_0(row: Row): string = row[0]
 
 proc get_0int(row: Row): int = row[0].parseInt
 
+proc get_0int64(row: Row): int64 = row[0].parseBiggestInt.int64
+
 proc getUser(row: Row, idx: int): DbUser =
   result.id         = row[idx+0].parseInt.int32
   result.first_name = row[idx+1]
@@ -140,6 +142,12 @@ proc init*(db: DbConn) =
       datetime   DATETIME,
       PRIMARY KEY (chat_id, message_id)
     )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS buzzers (
+      chat_id,
+      PRIMARY KEY (chat_id)
+    )
+  """
 
 
 ##
@@ -420,3 +428,15 @@ proc haveDeletable*(db: DbConn, chatId: int64, messageId: int): bool =
      LIMIT 1
   """
   db.optionalRow(query, chatId, messageId).isSome
+
+
+##
+## buzzers
+##
+
+proc getBuzzers*(db: DbConn): seq[int64] =
+  const query = sql"""
+    SELECT chat_id
+      FROM buzzers
+  """
+  db.allRows(query).map(get_0int64)

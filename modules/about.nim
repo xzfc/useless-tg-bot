@@ -1,5 +1,6 @@
 import ../bot
 import ../db
+import ../telega/yoba
 import ../sweet_options
 import ../telega/html
 import ../telega/req
@@ -65,13 +66,18 @@ proc at[T](s: seq[T], idx: int): Option[T] =
     some(s[idx])
 
 proc fullName(user: DbUser): string =
-  (if user.deleted: "†" else: "") & user.toUser.fullName.htmlEscape
+  let name = user.toUser.fullName.htmlEscape
+  if user.deleted:
+    "†" & name
+  else:
+    "<a href=\"tg://user?id=" & $user.id & "\">" & name & "</a>"
 
 proc fullNameRating(user: DbUser): string =
-  if not user.deleted:
-    user.toUser.fullName.htmlEscape
+  let name = user.toUser.fullName.htmlEscape
+  if user.deleted:
+    "†" & name & " @" & $user.id
   else:
-    "†" & user.toUser.fullName.htmlEscape & " @" & $user.id
+    "<a href=\"tg://user?id=" & $user.id & "\">" & name & "</a>"
 
 proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
   proc renderTime(t: Time): string =
@@ -80,9 +86,9 @@ proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
     else:
       ""
   proc renderRow(row: OpinionRow): string =
-    "— $1 <i>($2$3)</i>" % [
+    "— $1 ($2$3)" % [
       row.text,
-      row.author.fullName.htmlEscape,
+      row.author.fullName,
       row.datetime.renderTime]
   if rows.len == 0:
     texts.aboutNoAbout % [subj.fullName.htmlEscape]
@@ -97,7 +103,7 @@ proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
       ""
   proc renderRow(row: OpinionRow): string =
     "$1 — $2$3" % [
-      row.subj.fullName.htmlEscape,
+      row.subj.fullName,
       row.text,
       row.datetime.renderTime]
   if rows.len == 0:
@@ -112,11 +118,10 @@ proc renderLatestRows(rows: seq[OpinionRow]): string =
     else:
       ""
   proc renderRow(row: OpinionRow): string =
-    "$1 — $2 <i>($3$4)</i>" % [
-      row.subj.fullName.htmlEscape,
+    "$1 — $2 ($3)" % [
+      row.subj.fullName,
       row.text,
-      row.author.fullName.htmlEscape,
-      row.datetime.renderTime]
+      row.author.fullName]
   if rows.len == 0:
     texts.aboutEmptyRating
   else:
@@ -148,18 +153,8 @@ proc getUser(bot: Bot,
   else:
     some user.get.user
 
-proc reply2(bot: Bot, message: Message, text: string,
-            deletable: bool) {.async.} =
-  let reply = await bot.tg.reply(message,
-                                 text,
-                                 parseMode="HTML",
-                                 disableWebPagePreview=true)
-  if deletable:
-    reply ?-> reply:
-      bot.db.rememberDeletable(reply.chat.id, reply.messageId)
-
 template reply(text: string) =
-  asyncCheck reply2(bot, message, text, readonly)
+  asyncCheck yoba.replyWithTextMentions(bot, message, text, readonly)
 
 proc process(bot: Bot, update: Update) {.async.} =
   if (update.message?.text).isNone or (update.message?.fromUser).isNone:

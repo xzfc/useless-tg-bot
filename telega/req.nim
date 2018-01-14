@@ -47,6 +47,7 @@ proc telegramMethod*(this: Telega,
     result.ok = false
     result.code = res["error_code"].getNum.int
     result.description = res["description"].getStr
+    echo $res
 
 proc newTelega*(token: string): Telega =
   new(result)
@@ -122,3 +123,25 @@ proc deleteMessage*(this: Telega,
   if not reply.ok:
     echo "sendMessage: " & reply.getErrorText
   return reply.ok
+
+proc editMessageText*(this: Telega,
+                      chatId: int64,
+                      messageId: int32,
+                      text: string,
+                      parseMode: string = "",
+                      disableWebPagePreview: bool = true,
+                     ): Future[Option[Message]] {.async.} =
+  var form = newMultiPartData()
+  form["chat_id"] = $chatId
+  form["message_id"] = $messageId
+  form["text"] = text
+  if parseMode.len != 0:
+    form["parse_mode"] = parseMode
+  if disableWebPagePreview:
+    form["disable_web_page_preview"] = $true
+  let reply = await telegramMethod(this, "editMessageText", form)
+  if reply.ok:
+    return reply.result.parseMessage.some
+  else:
+    echo "editMessageText: " & reply.getErrorText
+    return none(Message)
