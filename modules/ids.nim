@@ -7,6 +7,8 @@ import asyncdispatch
 import options
 import sequtils
 
+MODULE(priority = 10)
+
 proc rememberUsers(bot: Bot, update: Update) =
   proc handleUser(user: User) =
     bot.db.rememberUser user
@@ -56,7 +58,7 @@ proc rememberChat(bot: Bot, update: Update) =
       # Remove user from cluster
       bot.db.forgetChatUser(user.id)
 
-proc process*(bot: Bot, update: Update) {.async.} =
+proc process(bot: Bot, update: Update) {.async.} =
   rememberUsers(bot, update)
   rememberLast(bot, update)
   rememberChat(bot, update)

@@ -8,6 +8,8 @@ import asyncdispatch
 import nre
 import options
 
+MODULE()
+
 let reReply = re r"""(*UTF8)(?x)(?s)
   \/[@a-zA-Z_]+
   \ +
@@ -15,7 +17,7 @@ let reReply = re r"""(*UTF8)(?x)(?s)
   $
 """
 
-proc process*(bot: Bot, update: Update) {.async.} =
+proc process(bot: Bot, update: Update) {.async.} =
   if not update.isCommand(bot, "reply"):
     return
   block:

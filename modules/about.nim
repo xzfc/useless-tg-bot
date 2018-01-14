@@ -14,6 +14,8 @@ import sequtils
 import strutils
 import times
 
+MODULE()
+
 let is_re = re(r"""(*UTF8)(?x)
   (?<user> @[a-zA-Z0-9_]+ | <user\ ent=0>[^<]*<\/user> )
   \ *(?:—|--)\ *
@@ -159,7 +161,7 @@ proc reply2(bot: Bot, message: Message, text: string,
 template reply(text: string) =
   asyncCheck reply2(bot, message, text, readonly)
 
-proc process*(bot: Bot, update: Update) {.async.} =
+proc process(bot: Bot, update: Update) {.async.} =
   if (update.message?.text).isNone or (update.message?.fromUser).isNone:
     return
   let message = update.message.get

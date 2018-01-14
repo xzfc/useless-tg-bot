@@ -1,14 +1,16 @@
 import ./bot
-import ./modules/about as module_about
-import ./modules/annoy as module_annoy
-import ./modules/delete as module_delete
-import ./modules/ids as module_ids
-import ./modules/markov as module_markov
-import ./modules/reply as module_reply
 import ./telega/req
 import asyncdispatch
+import macros
 import os
 import random
+
+static:
+  discard staticExec"""
+    printf 'from %-20s import nil\n' modules/*.nim > autogen_modules.nim
+  """
+import autogen_modules
+prepareModules()
 
 proc main(token, dbPath, logPath: string) {.async.} =
   let logFile = open(logPath, mode = fmAppend)
@@ -16,12 +18,7 @@ proc main(token, dbPath, logPath: string) {.async.} =
   while true:
     let updates = await bot.tg.getUpdates(logFile = logFile)
     for update in updates:
-      await module_ids.process(bot, update) # Should be first
-      await module_about.process(bot, update)
-      await module_annoy.process(bot, update)
-      await module_delete.process(bot, update)
-      await module_markov.process(bot, update)
-      await module_reply.process(bot, update)
+      await runModules(bot, update)
 
 let dbPath = paramStr(1)
 let logPath = paramStr(2)

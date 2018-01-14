@@ -12,7 +12,9 @@ import options
 # * it's bot's own message
 # * message is explicitly marked "deletable" in bot DB
 
-proc process*(bot: Bot, update: Update) {.async.} =
+MODULE()
+
+proc process(bot: Bot, update: Update) {.async.} =
   if update.isCommand(bot, "delete"):
     block:
       let message = update.message.getOrBreak

@@ -8,7 +8,9 @@ import ../utils/randomFuto
 import asyncdispatch
 import strutils
 
-proc process*(bot: Bot, update: Update) {.async.} =
+MODULE()
+
+proc process(bot: Bot, update: Update) {.async.} =
   if update.isCommand(bot, "futo"):
     update.message ?-> message:
       let futoName = randomFuto()

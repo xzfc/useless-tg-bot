@@ -14,6 +14,8 @@ import sequtils
 import strutils
 import unicode
 
+MODULE()
+
 let reQuestion = re r"""(*UTF8)(?x)(?i)
   ! \ *
   (я|мы|он|она|они|мне|ему|ей|им)
@@ -67,7 +69,7 @@ proc generatePhrase(db: DbConn, chatId: int64, start: string, maxLen: int
       result.add word
     inc n
 
-proc process*(bot: Bot, update: Update) {.async.} =
+proc process(bot: Bot, update: Update) {.async.} =
   update.message ?-> message:
     message.text ?-> text:
       if not text.startsWith("/"):
