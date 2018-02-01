@@ -103,3 +103,10 @@ template getOrBreak*[T](EXPR: ref T): auto =
 
 template `.?`*[T](EXPR: Option[T] | ref T, FIELD: untyped): auto =
   EXPR.getOrBreak.FIELD
+
+proc `//`*[T](a, b: Option[T]): Option[T] =
+  if a.isSome:
+    a
+  else:
+    b
+

@@ -146,15 +146,36 @@ proc init*(db: DbConn) =
     CREATE TABLE IF NOT EXISTS buzzers (
       chat_id,
       PRIMARY KEY (chat_id)
-    )
-  """
-
+    )"""
+  db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS user_history (
+      uid        INTEGER,
+      type       INTEGER,
+      value      TEXT,
+      first_seen DATETIME,
+      last_seen  DATETIME,
+      PRIMARY KEY (uid, type, value)
+    )"""
 
 ##
 ## users
 ##
 
-proc rememberUser*(db: DbConn, user: User) =
+proc rememberUserHistory(db: DbConn, id: int32, kind: int32,
+                         value: string, now: int32) =
+  db.execEx sql"""
+    INSERT OR REPLACE
+      INTO user_history
+    VALUES (?1, ?2, ?3,
+            COALESCE((SELECT first_seen
+                        FROM user_history
+                       WHERE uid = ?1
+                         AND type = ?2
+                         AND value = ?3), ?4),
+            ?4)
+    """, id, kind, value, now
+
+proc rememberUser*(db: DbConn, user: User, now: int32) =
   if user.username.isSome:
     db.execEx sql"""
                 UPDATE users
@@ -180,6 +201,9 @@ proc rememberUser*(db: DbConn, user: User) =
               user.first_name,
               user.last_name.getNil,
               user.username.getNil
+    db.rememberUserHistory(user.id, 0, user.fullName, now)
+    if user.username.isSome:
+      db.rememberUserHistory(user.id, 1, user.username.get, now)
 
 proc searchUserByUid*(db: DbConn, uid: int32): Option[DbUser] =
   let query = sql"""
@@ -200,6 +224,17 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[DbUser] =
   """
   return db.optionalRow(query, uname).map(getUser)
 
+proc searchUserHistory*(db: DbConn, uid: int32
+                       ): tuple[fullName: seq[string], uname: seq[string]] =
+  const query = sql"""
+    SELECT value
+      FROM user_history
+     WHERE uid = ?
+       AND type = ?
+     ORDER BY last_seen
+  """
+  return (db.allRows(query, uid, 0).map(get_0),
+          db.allRows(query, uid, 1).map(get_0))
 
 ##
 ## opinions

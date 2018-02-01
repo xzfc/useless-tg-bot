@@ -21,3 +21,11 @@ const
   aboutCantDelete*  = "Удалять записи можно только в группе."
 
   deleteNo*         = "не"
+
+  identity*         = unindent"""
+    <b>ID</b>: $1
+    <b>Имена</b>:
+    $2
+    <b>Юзернеймы</b>:
+    $3
+  """

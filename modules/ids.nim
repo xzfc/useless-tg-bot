@@ -6,20 +6,37 @@ import ../telega/types
 import asyncdispatch
 import options
 import sequtils
+import sets
 
 MODULE(priority = 10)
 
+proc date(update: Update): int32 =
+  let msg =
+    update.message //
+    update.editedMessage //
+    update.channelPost //
+    update.editedChannelPost
+  msg ?-> msg:
+    return (msg.editDate // msg.forwardDate // msg.date.some).get
+  else:
+    # Should not be used by rememberUser
+    return 0
+
 proc rememberUsers(bot: Bot, update: Update) =
+  var handledUsers = initSet[int64]()
+  let now = update.date
   proc handleUser(user: User) =
-    bot.db.rememberUser user
+    if not handledUsers.contains user.id:
+      handledUsers.incl user.id
+      bot.db.rememberUser(user, now)
   proc handleUsers(users: seq[User]) =
     for user in users:
       handleUser user
   proc handleEntity(entity: MessageEntity) =
     if entity.kind == meTextMention:
-      bot.db.rememberUser entity.user
+      bot.db.rememberUser(entity.user, now)
   proc handleMessage(msg: Message) =
-    msg.fromUser.map         handleUser
+    msg.fromUser.map       handleUser
     msg.forwardFrom.map    handleUser
     msg.newChatMembers.map handleUsers
     msg.leftChatMember.map handleUser
