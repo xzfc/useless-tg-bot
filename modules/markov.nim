@@ -17,11 +17,18 @@ import unicode
 MODULE()
 
 let reQuestion = re r"""(*UTF8)(?x)(?i)
-  ! \ *
-  (я|мы|он|она|они|мне|ему|ей|им)
-  ,?
-  \ +
-  (?: [^.] | \.[^ ] )+ # anything except ". "
+  ( !
+  | Холи
+  | Крекер[сз]?
+  | Холи\ +Крекер[сз]?
+  | Holy\ +Crackers
+  | @\w+
+  )
+  [,:\ ]
+  \ *
+  (я|мы|ты|он|она|они|мне|нам|ему|ей|им)
+  [,\ ]
+  .*
   \?
   $
 """
@@ -69,20 +76,29 @@ proc generatePhrase(db: DbConn, chatId: int64, start: string, maxLen: int
       result.add word
     inc n
 
+proc isMe(bot: Bot, text: string): bool =
+  if text.startsWith("@") and text[1..^1] != bot.me.username.get:
+    return false
+  return true
+
 proc process(bot: Bot, update: Update) {.async.} =
   update.message ?-> message:
     message.text ?-> text:
       if not text.startsWith("/"):
         bot.learn(message.chat.id, text)
       text.match(reQuestion) ?-> match:
+        if not bot.isMe(match.captures[0]):
+          return
         var start: string = "Ты"
-        case unicode.toLower(match.captures[0]):
+        case unicode.toLower(match.captures[1]):
           of "я":   start = "Ты"
           of "мы":  start = "Вы"
+          of "ты":  start = "Я"
           of "он":  start = "Он"
           of "она": start = "Она"
           of "они": start = "Они"
           of "мне": start = "Тебе"
+          of "нам": start = "Вам"
           of "ему": start = "Ему"
           of "ей":  start = "Ей"
           of "им":  start = "Им"
