@@ -26,7 +26,7 @@ let reQuestion = re r"""(*UTF8)(?x)(?i)
   )
   [,:\ ]
   \ *
-  (я|мы|ты|он|она|они|мне|нам|ему|ей|им)
+  (я|мы|ты|он|она|они|мне|нам|ему|ей|им|меня|тебя|его|её|их)
   [,\ ]
   .*
   \?
@@ -102,6 +102,11 @@ proc process(bot: Bot, update: Update) {.async.} =
           of "ему": start = "Ему"
           of "ей":  start = "Ей"
           of "им":  start = "Им"
+          of "меня":start = "Тебя"
+          of "тебя":start = "Меня"
+          of "его": start = "Его"
+          of "её":  start = "Её"
+          of "их":  start = "Их"
         let replyText = bot.db.generatePhrase(message.chat.id, start, 20)
         if replyText.len != 0:
           asyncCheck bot.tg.reply(message,
