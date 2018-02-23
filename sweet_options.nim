@@ -25,11 +25,22 @@ proc valueExists*[T](x: ref T):     bool = x != nil
 proc getValue*[T](x: Option[T]): T = x.get
 proc getValue*[T](x: ref T):     T = x[]
 
+proc newLetStmt2*(lhs, value: NimNode): NimNode {.compiletime.} =
+  ## Create a new let stmt
+  var inner: NimNode
+  if lhs.kind == nnkIdent:
+    inner = newNimNode(nnkIdentDefs).add(lhs)
+  else:
+    inner = newNimNode(nnkVarTuple)
+    copyChildrenTo(lhs, inner)
+  inner.add(newNimNode(nnkEmpty), value)
+  return newNimNode(nnkLetSection).add(inner)
+
 proc optionMatch(EXPR, IDENT, BODY, ELSE_BODY: NimNode): NimNode =
   let v = genSym()
   let ifStmt = newIfStmt(
       (newDotExpr(v, newIdentNode "valueExists"),
-       newStmtList(newLetStmt(IDENT, newDotExpr(v, newIdentNode "getValue")),
+       newStmtList(newLetStmt2(IDENT, newDotExpr(v, newIdentNode "getValue")),
                    BODY)))
   if not ELSE_BODY.isNil:
     ifStmt.add ELSE_BODY
@@ -50,7 +61,7 @@ macro `?->`*(EXPR, IDENT, BODY, ELSE_BODY: untyped): untyped =
   #
   # Where EXPR have type Option[T] or ref T and IDENT have type T.
 
-  assert IDENT.kind == nnkIdent
+  assert IDENT.kind == nnkIdent or IDENT.kind == nnkPar
   assert BODY.kind == nnkStmtList
   assert ELSE_BODY.kind == nnkElse
   return optionMatch(EXPR, IDENT, BODY, ELSE_BODY)
@@ -74,7 +85,7 @@ macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
   #
   # Where EXPR have type Option[T] or ref T and IDENT have type T.
 
-  assert IDENT.kind == nnkIdent
+  assert IDENT.kind == nnkIdent or IDENT.kind == nnkPar
   assert BODY.kind == nnkStmtList
   return optionMatch(EXPR, IDENT, BODY, nil)
 
