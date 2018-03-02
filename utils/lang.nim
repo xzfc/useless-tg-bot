@@ -120,7 +120,7 @@ proc matchMention*(s, username: string): Option[string] =
   return
 
 
-let reLi = re r"""(*UTF8)(*UCP)(?x)(?i)
+let reWhether = re r"""(*UTF8)(*UCP)(?x)(?i)
   (?<left> .*? )
   \ +
   ли
@@ -129,21 +129,18 @@ let reLi = re r"""(*UTF8)(*UCP)(?x)(?i)
   \?
 """
 
+let reOr = re r"""(*UTF8)(*UCP)(?x)(?i)
+  (?<left> .*? )
+  ,?
+  \ +
+  или
+  \ +
+  (?<right> .* )
+  \?
+"""
+
 proc choice[T](a: seq[T]): T =
   a[a.len.random]
-
-proc generateLi*(s: string): Option[string] =
-  s.match(reLi) ?-> match:
-    let left = match.captures["left"]
-    let right = match.captures["right"]
-    const q = @[
-      @[" не ", " ни разу не "],
-      @[" "],
-    ]
-    return (right.reversePerson.capitalize &
-            q.choice.choice &
-            left.uncapitalize &
-            ".").some
 
 proc generateMarkovPhrase(
     start: string, maxLen: int,
@@ -160,7 +157,7 @@ proc generateMarkovPhrase(
     inc n
 
 proc mkReply*(s: string, nextMarkov: string -> string): Option[string] =
-  s.match(reLi) ?-> match:
+  s.match(reWhether) ?-> match:
     let left = match.captures["left"]
     let right = match.captures["right"]
     const q = @[
@@ -171,6 +168,12 @@ proc mkReply*(s: string, nextMarkov: string -> string): Option[string] =
                 q.choice.choice &
                 left.uncapitalize &
                 ".")
+
+  s.match(reOr) ?-> match:
+    let left = match.captures["left"]
+    let right = match.captures["right"]
+    let reply = @[left.uncapitalize, right].choice
+    return (reply & ".").reversePerson.capitalize.some
 
   block:
     let (first, rest) = s.split
