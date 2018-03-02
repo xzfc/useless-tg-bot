@@ -1,8 +1,10 @@
 import ../sweet_options
 import ./randomEmoji
+import algorithm
 import future
 import nre
 import random
+import sequtils
 import strutils except toLower, capitalize
 import unicode
 import unittest
@@ -170,16 +172,16 @@ proc mkReply*(s: string, nextMarkov: string -> string): Option[string] =
                 left.uncapitalize &
                 ".")
 
-  let (first, rest) = s.split
-  if first.isPronoun:
+  block:
+    let (first, rest) = s.split
     var start = first.reversePersonWord
     if start.isNil:
       start = first
     let text = generateMarkovPhrase(start, 20, nextMarkov)
     if text.len != 0:
-      return some(start.capitalize & " " & text & " " & randomEmoji())
+      return (start & " " & text & " " & randomEmoji()).capitalize.some
 
-  return string.none
+  return randomEmoji().some
 
 suite "regex":
   test "matchMention":
