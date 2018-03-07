@@ -37,11 +37,11 @@ proc get(node: JsonNode, name: string): JsonNode =
 proc unmarshal(node: JsonNode, T: typedesc): T =
   when T is enum | ref | seq | Option:
     parseNode(node, result)
-  elif T is bool:   node.parsePrimitive(JBool,   getBVal, bool)
-  elif T is int32:  node.parsePrimitive(JInt,    getNum,  int32)
-  elif T is int64:  node.parsePrimitive(JInt,    getNum,  int64)
-  elif T is uint:   node.parsePrimitive(JInt,    getNum,  uint)
-  elif T is string: node.parsePrimitive(JString, getStr,  string)
+  elif T is bool:   node.parsePrimitive(JBool,   getBool,       bool)
+  elif T is int32:  node.parsePrimitive(JInt,    getBiggestInt, int32)
+  elif T is int64:  node.parsePrimitive(JInt,    getBiggestInt, int64)
+  elif T is uint:   node.parsePrimitive(JInt,    getBiggestInt, uint)
+  elif T is string: node.parsePrimitive(JString, getStr,        string)
   elif T is float:  0.float # FIXME
   else:
     for a, b in result.fieldPairs:

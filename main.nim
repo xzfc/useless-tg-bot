@@ -7,7 +7,7 @@ import random
 
 static:
   discard staticExec"""
-    printf 'from %-20s import nil\n' modules/*.nim > autogen_modules.nim
+    printf 'from %-20s import nil\n' modules/*.nim | sed 's/\.nim / /' > autogen_modules.nim
   """
 import autogen_modules
 prepareModules()

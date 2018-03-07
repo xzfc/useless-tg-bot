@@ -40,12 +40,12 @@ proc telegramMethod*(this: Telega,
   client.close()
 
   # XXX: `[]` can fail
-  if res["ok"].getBVal:
+  if res["ok"].getBool:
     result.ok = true
     result.result = res["result"]
   else:
     result.ok = false
-    result.code = res["error_code"].getNum.int
+    result.code = res["error_code"].getInt
     result.description = res["description"].getStr
     echo $res
 
