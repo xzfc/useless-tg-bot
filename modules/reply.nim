@@ -5,6 +5,7 @@ import ../telega/html
 import ../telega/req
 import ../telega/types
 import asyncdispatch
+import future
 import nre
 import options
 
@@ -20,13 +21,10 @@ let reReply = re r"""(*UTF8)(?x)(?s)
 proc process(bot: Bot, update: Update) {.async.} =
   if not update.isCommand(bot, "reply"):
     return
-  block:
-    let message = update.message.getOrBreak
-    let html = renderEntities(message.text.getOrBreak,
-                              message.entities.getOrBreak)
-    asyncCheck bot.tg.reply(message.replyToMessage.getOrBreak,
-                            html.match(reReply).getOrBreak.captures["text"],
-                            parseMode="HTML")
-    return
-  block:
-    asyncCheck bot.tg.reply(update.message.getOrBreak, "...")
+  let message = update.message.get
+  let html = renderEntities(message.text.get, message.entities.get)
+  asyncCheck bot.tg.sendMessage(
+    chat_id=message.chat.id,
+    text=html.match(reReply).get.captures["text"],
+    parseMode="HTML",
+    replyToMessageId=message.replyToMessage.toOption.map(a => a.message_id))

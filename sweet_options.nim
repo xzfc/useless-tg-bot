@@ -110,3 +110,8 @@ proc `//`*[T](a, b: Option[T]): Option[T] =
   else:
     b
 
+proc toOption*[T](v: ref T): Option[T] =
+  if v.isNil:
+    T.none
+  else:
+    v[].some

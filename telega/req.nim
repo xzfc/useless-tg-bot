@@ -83,7 +83,7 @@ proc sendMessage*(this: Telega,
                   text: string,
                   parseMode: string = "",
                   disableWebPagePreview: bool = false,
-                  replyToMessageId: int = 0
+                  replyToMessageId: Option[int32] = int32.none
                  ): Future[Option[Message]] {.async.} =
   var form = newMultiPartData()
   form["chat_id"] = $chatId
@@ -92,14 +92,30 @@ proc sendMessage*(this: Telega,
     form["parse_mode"] = parseMode
   if disableWebPagePreview:
     form["disable_web_page_preview"] = $true
-  if replyToMessageId != 0:
-    form["reply_to_message_id"] = $replyToMessageId
+  if replyToMessageId.isSome:
+    form["reply_to_message_id"] = $replyToMessageId.get
   let reply = await telegramMethod(this, "sendMessage", form)
   if reply.ok:
     return reply.result.parseMessage.some
   else:
     echo "sendMessage: " & reply.getErrorText
     return none(Message)
+
+proc sendMessage*(this: Telega,
+                  chatId: int64,
+                  text: string,
+                  parseMode: string = "",
+                  disableWebPagePreview: bool = false,
+                  replyToMessageId: int
+                 ): Future[Option[Message]] =
+  this.sendMessage(chatId,
+                   text,
+                   parseMode,
+                   disableWebPagePreview,
+                   if replyToMessageId == 0:
+                     int32.none
+                   else:
+                     replyToMessageId.int32.some)
 
 proc reply*(this: Telega,
             msg: Message,
@@ -111,7 +127,7 @@ proc reply*(this: Telega,
                    text,
                    parseMode,
                    disableWebPagePreview,
-                   msg.message_id.int)
+                   msg.message_id.some)
 
 proc deleteMessage*(this: Telega,
                     chatId: int64,
