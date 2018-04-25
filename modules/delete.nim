@@ -10,7 +10,7 @@ import options
 # /delete -- request to delete bot's message
 # All requirements are mandatory:
 # * it's bot's own message
-# * message is explicitly marked "deletable" in bot DB
+# * message is explicitly marked "deletable" by this or any user in bot DB
 
 MODULE()
 
@@ -21,7 +21,9 @@ proc process(bot: Bot, update: Update) {.async.} =
       let origMsg = message.reply_to_message.getOrBreak
       if (origMsg.fromUser.?id) != bot.me.id:
         break
-      if bot.db.haveDeletable(origMsg.chat.id, origMsg.message_id):
+      if bot.db.haveDeletable(origMsg.chat.id,
+                              origMsg.message_id,
+                              message.fromUser.?id):
         asyncCheck bot.tg.deleteMessage(origMsg.chat.id,
                                         origMsg.message_id)
         bot.db.forgetDeletable(origMsg.chat.id, origMsg.message_id)

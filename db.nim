@@ -139,7 +139,8 @@ proc init*(db: DbConn) =
     CREATE TABLE IF NOT EXISTS deletable_messages (
       chat_id    INTEGER,
       message_id INTEGER,
-      datetime   DATETIME,
+      user_id    INTEGER,
+      datetime   DATETIME NOT NULL,
       PRIMARY KEY (chat_id, message_id)
     )"""
   db.execEx sql"""
@@ -437,13 +438,14 @@ proc forgetChatUser*(db: DbConn, userId: int64) =
 ## deletable_messages
 ##
 
-proc rememberDeletable*(db: DbConn, chatId: int64, messageId: int) =
+proc rememberDeletable*(db: DbConn, chatId: int64, messageId: int,
+                        userId: Option[int32]) =
   const query = sql"""
     INSERT
       INTO deletable_messages
-    VALUES (?, ?, CAST(STRFTIME('%s', 'now') AS INT))
+    VALUES (?, ?, ?, CAST(STRFTIME('%s', 'now') AS INT))
   """
-  db.execEx(query, chatId, messageId)
+  db.execEx(query, chatId, messageId, userId)
 
 proc forgetDeletable*(db: DbConn, chatId: int64, messageId: int) =
   const query = sql"""
@@ -454,15 +456,17 @@ proc forgetDeletable*(db: DbConn, chatId: int64, messageId: int) =
   """
   db.execEx(query, chatId, messageId)
 
-proc haveDeletable*(db: DbConn, chatId: int64, messageId: int): bool =
+proc haveDeletable*(db: DbConn, chatId: int64, messageId: int, 
+                    userId: int32): bool =
   const query = sql"""
     SELECT 1
       FROM deletable_messages
      WHERE chat_id = ?
        AND message_id = ?
+       AND (user_id = ? OR user_id IS NULL)
      LIMIT 1
   """
-  db.optionalRow(query, chatId, messageId).isSome
+  db.optionalRow(query, chatId, messageId, userId).isSome
 
 
 ##

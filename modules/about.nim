@@ -154,7 +154,10 @@ proc getUser(bot: Bot,
     some user.get.user
 
 template reply(text: string) =
-  asyncCheck yoba.replyWithTextMentions(bot, message, text, readonly)
+  if readonly:
+    asyncCheck yoba.replyWithTextMentions(bot, message, text).markDeleteable(bot)
+  else:
+    asyncCheck yoba.replyWithTextMentions(bot, message, text)
 
 proc process(bot: Bot, update: Update) {.async.} =
   if (update.message?.text).isNone or (update.message?.fromUser).isNone:

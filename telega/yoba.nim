@@ -1,13 +1,14 @@
-import nre
+import ../bot
 import ../db
 import ../sweet_options
-import tables
-import asyncdispatch
-import strutils
-import sets
-import ../bot
-import ./types
 import ./req
+import ./types
+import asyncdispatch
+import future
+import nre
+import sets
+import strutils
+import tables
 
 let reTextMention = re r"""(*UTF8)(?x)
   <a\ href="tg://user\?id=(?<id>[0-9]+)">
@@ -26,8 +27,7 @@ proc nextBuzzer(): int64 =
 proc replyWithTextMentions*(bot: Bot,
                             message: Message,
                             text: string,
-                            deletable: bool,
-                           ): Future[void] {.async.} =
+                           ): Future[Option[Message]] {.async.} =
   # 1) Send message without text mentions.
   # 2) Probe all mentioned users using buzzers.
   # 3) Edit message adding mentions.
@@ -65,10 +65,19 @@ proc replyWithTextMentions*(bot: Bot,
       m.captures["text"]
 
   let replyStatus = await reply
+  result = replyStatus
   replyStatus ?-> reply:
-    if deletable:
-      bot.db.rememberDeletable(reply.chat.id, reply.message_id)
-    asyncCheck bot.tg.editMessageText(reply.chat.id,
-                                      reply.message_id,
-                                      new_msg,
-                                      parseMode="html")
+    if new_msg != empty:
+      let editRes = await bot.tg.editMessageText(reply.chat.id,
+                                                 reply.message_id,
+                                                 new_msg,
+                                                 parseMode="HTML")
+      if editRes.isSome:
+        result = editRes
+
+proc markDeleteable*(msg: Future[Option[Message]],
+                     bot: Bot,
+                     user: Option[User] = User.none
+                    ): Future[void] {.async.} =
+  (await msg) ?-> m:
+    bot.db.rememberDeletable(m.chat.id, m.message_id, user.map(u=>u.id))

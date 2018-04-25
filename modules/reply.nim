@@ -4,6 +4,7 @@ import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
+import ../telega/yoba
 import asyncdispatch
 import future
 import nre
@@ -28,3 +29,4 @@ proc process(bot: Bot, update: Update) {.async.} =
     text=html.match(reReply).get.captures["text"],
     parseMode="HTML",
     replyToMessageId=message.replyToMessage.toOption.map(a => a.message_id))
+    .markDeleteable(bot, message.fromUser)

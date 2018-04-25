@@ -1,4 +1,5 @@
 import db_sqlite
+import options
 import sequtils
 import sqlite3
 
@@ -34,6 +35,12 @@ proc dbValue*(v: string): DbValue =
     DbValue(kind: dvkNull)
   else:
     DbValue(kind: dvkString, s: v)
+
+proc dbValue*[T](v: Option[T]): DbValue =
+  if v.isSome:
+    v.unsafeGet.dbValue
+  else:
+    DbValue(kind: dvkNull)
 
 proc dbBlob*(v: string): DbValue =
   if v.isNil:
