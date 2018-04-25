@@ -53,11 +53,20 @@ proc rememberUsers(bot: Bot, update: Update) =
   update.editedChannelPost.map handleMessage
 
 proc rememberLast(bot: Bot, update: Update) =
+  proc getDocument(m: Message): Option[string] =
+    m.sticker  ?-> x:
+      return x.fileId.some
+    m.document ?-> x:
+      if x.mimeType == "video/mp4".some:
+        return x.fileId.some
+    return string.none
   block:
     let message = update.message.getOrBreak
-    bot.db.rememberLastUserMessage(message.chat.id,
-                                   message.fromUser.getOrBreak.id,
-                                   message.messageId)
+    let userId = message.fromUser.getOrBreak.id
+    bot.db.rememberLastUserMessage(message.chat.id, userId, message.messageId)
+    bot.db.rememberLastUserDocument(message.chat.id,
+                                    userId,
+                                    message.getDocument.getOrBreak)
 
 proc rememberChat(bot: Bot, update: Update) =
   update.message ?-> message:

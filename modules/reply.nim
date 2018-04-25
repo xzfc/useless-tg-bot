@@ -24,9 +24,22 @@ proc process(bot: Bot, update: Update) {.async.} =
     return
   let message = update.message.get
   let html = renderEntities(message.text.get, message.entities.get)
-  asyncCheck bot.tg.sendMessage(
-    chat_id=message.chat.id,
-    text=html.match(reReply).get.captures["text"],
-    parseMode="HTML",
-    replyToMessageId=message.replyToMessage.toOption.map(a => a.message_id))
-    .markDeleteable(bot, message.fromUser)
+  let replyTo = message.replyToMessage.toOption.map(a => a.message_id)
+  html.match(reReply) ?-> m:
+    asyncCheck bot.tg.sendMessage(
+      chatId = message.chat.id,
+      text = m.captures["text"],
+      parseMode = "HTML",
+      replyToMessageId = replyTo
+    ).markDeleteable(bot, message.fromUser)
+  else:
+    let document = bot.db.getLastUserDocument(
+      message.chat.id, message.fromUser.get.id)
+    document ?-> document:
+      asyncCheck bot.tg.sendSticker(
+        chatId = message.chat.id,
+        sticker = document,
+        replyToMessageId = message.replyToMessage.toOption.map(a => a.message_id)
+      ).markDeleteable(bot, message.fromUser)
+    else:
+      asyncCheck bot.tg.reply(message, "...").markDeleteable(bot)

@@ -129,6 +129,23 @@ proc reply*(this: Telega,
                    disableWebPagePreview,
                    msg.message_id.some)
 
+proc sendSticker*(this: Telega,
+                  chatId: int64,
+                  sticker: string,
+                  replyToMessageId: Option[int32] = int32.none
+                 ): Future[Option[Message]] {.async.} =
+  var form = newMultiPartData()
+  form["chat_id"] = $chatId
+  form["sticker"] = sticker
+  if replyToMessageId.isSome:
+    form["reply_to_message_id"] = $replyToMessageId.get
+  let reply = await telegramMethod(this, "sendSticker", form)
+  if reply.ok:
+    return reply.result.parseMessage.some
+  else:
+    echo "sendSticker: " & reply.getErrorText
+    return none(Message)
+
 proc deleteMessage*(this: Telega,
                     chatId: int64,
                     messageId: int): Future[bool] {.async.} =

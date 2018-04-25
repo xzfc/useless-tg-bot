@@ -129,6 +129,13 @@ proc init*(db: DbConn) =
       PRIMARY KEY (chat_id, user_id)
     )"""
   db.execEx sql"""
+    CREATE TABLE IF NOT EXISTS last_user_document (
+      chat_id    INTEGER,
+      user_id    INTEGER,
+      file_id    INTEGER NOT NULL,
+      PRIMARY KEY (chat_id, user_id)
+    )"""
+  db.execEx sql"""
     CREATE TABLE IF NOT EXISTS chats (
       chat_id    INTEGER,
       name       TEXT,
@@ -402,6 +409,29 @@ proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
        AND user_id = ?
   """
   db.optionalRow(query, chatId, userId).map(get_0int)
+
+##
+## last_user_document
+##
+
+proc rememberLastUserDocument*(db: DbConn, chatId: int64, userId: int,
+                               documentId: string) =
+  const query = sql"""
+    INSERT OR REPLACE
+      INTO last_user_document
+    VALUES (?, ?, ?)
+  """
+  db.execEx(query, chatId, userId, documentId)
+
+proc getLastUserDocument*(db: DbConn, chatId: int64, userId: int
+                         ): Option[string] =
+  const query = sql"""
+    SELECT file_id
+      FROM last_user_document
+     WHERE chat_id = ?
+       AND user_id = ?
+  """
+  db.optionalRow(query, chatId, userId).map(get_0)
 
 
 ##
