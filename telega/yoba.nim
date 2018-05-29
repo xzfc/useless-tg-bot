@@ -27,6 +27,7 @@ proc nextBuzzer(): int64 =
 proc replyWithTextMentions*(bot: Bot,
                             message: Message,
                             text: string,
+                            dropMentsions: bool,
                            ): Future[Option[Message]] {.async.} =
   # 1) Send message without text mentions.
   # 2) Probe all mentioned users using buzzers.
@@ -38,6 +39,9 @@ proc replyWithTextMentions*(bot: Bot,
 
   let reply = bot.tg.reply(message, empty, parseMode="HTML",
                            disableWebPagePreview=true)
+
+  if dropMentsions:
+    return await reply
 
   var ids    = initOrderedSet[int32]()
   var ok     = initOrderedSet[int32]()
