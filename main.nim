@@ -12,9 +12,9 @@ static:
 import autogen_modules
 prepareModules()
 
-proc main(token, dbPath, logPath: string) {.async.} =
+proc main(token, dbPath, logPath, markovPath: string) {.async.} =
   let logFile = open(logPath, mode = fmAppend)
-  let bot = await newBot(token, dbPath)
+  let bot = await newBot(token, dbPath, markovPath)
   while true:
     let updates = await bot.tg.getUpdates(logFile = logFile)
     for update in updates:
@@ -22,7 +22,8 @@ proc main(token, dbPath, logPath: string) {.async.} =
 
 let dbPath = paramStr(1)
 let logPath = paramStr(2)
+let markovPath = paramStr(3)
 let token = stdin.readLine()
 randomize()
-asyncCheck main(token, dbPath, logPath)
+asyncCheck main(token, dbPath, logPath, markovPath)
 runForever()

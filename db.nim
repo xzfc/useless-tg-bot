@@ -27,18 +27,6 @@ type
     word  *: string
     count *: uint
 
-proc allRows(db: DbConn, query: SqlQuery,
-             args: varargs[DbValue, dbValue]): seq[Row] =
-  return toSeq(db.fastRowsEx(query, args))
-
-proc optionalRow(db: DbConn, query: SqlQuery,
-      args: varargs[DbValue, dbValue]): Option[Row] =
-  let a = db.allRows(query, args)
-  if a.len == 0:
-    return none(Row)
-  else:
-    return some(a[0])
-
 proc getNil(s: Option[string]): string =
   if s.isSome:
     return s.get
@@ -112,14 +100,6 @@ proc init*(db: DbConn) =
       text       TEXT,
       datetime   DATETIME,
       PRIMARY KEY (cluster_id, author_uid, subj_uid)
-    )"""
-  db.execEx sql"""
-    CREATE TABLE IF NOT EXISTS markov (
-      chat_id    INTEGER,
-      word_from  TEXT,
-      word_to    TEXT,
-      count      INTEGER,
-      PRIMARY KEY (chat_id, word_from, word_to)
     )"""
   db.execEx sql"""
     CREATE TABLE IF NOT EXISTS last_user_message (
@@ -355,37 +335,6 @@ proc searchOpinion*(db: DbConn, chatId: int64,
      LIMIT 1
   """
   return db.optionalRow(query, chatId, authorUid, subjUid).map(getOpinionRow)
-
-
-##
-## markov
-##
-
-proc rememberMarkov*(db: DbConn, chatId: int64, wordFrom, wordTo: string) =
-  const query1 = sql"""
-    INSERT OR IGNORE
-      INTO markov
-    VALUES (?, ?, ?, 0)
-  """
-  const query2 = sql"""
-    UPDATE markov
-       SET count = count + 1
-     WHERE chat_id = ?
-       AND word_from = ?
-       AND word_to = ?
-  """
-  db.execEx(query1, chatId, wordFrom, wordTo)
-  db.execEx(query2, chatId, wordFrom, wordTo)
-
-proc markovGetNext*(db: DbConn, chatId: int64, wordFrom: string
-                   ): seq[MarkovNextRow] =
-  const query = sql"""
-    SELECT word_to, count
-      FROM markov
-     WHERE chat_id = ?
-       AND word_from = ?
-  """
-  db.allRows(query, chatId, wordFrom).map(getMarkovNextRow)
 
 
 ##

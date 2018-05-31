@@ -111,3 +111,17 @@ iterator fastRowsEx*(db: DbConn, query: SqlQuery,
     setRow(stmt, result, L)
     yield result
   if finalize(stmt) != SQLITE_OK: dbError(db)
+
+
+proc allRows*(db: DbConn, query: SqlQuery,
+             args: varargs[DbValue, dbValue]): seq[Row] =
+  return toSeq(db.fastRowsEx(query, args))
+
+proc optionalRow*(db: DbConn, query: SqlQuery,
+                  args: varargs[DbValue, dbValue]): Option[Row] =
+  let a = db.allRows(query, args)
+  if a.len == 0:
+    return none(Row)
+  else:
+    return some(a[0])
+

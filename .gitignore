@@ -1,4 +1,4 @@
-/nimcache
-/main
 /autogen_modules.nim
-*.db
+/main
+/utils/markov_cli
+nimcache

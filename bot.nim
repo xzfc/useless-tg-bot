@@ -1,6 +1,7 @@
 import ./db
 import ./telega/req
 import ./telega/types
+import ./utils/markov_lib
 import algorithm
 import asyncdispatch
 import db_sqlite
@@ -12,13 +13,15 @@ type
     tg *: Telega
     db *: DbConn
     me *: User
+    markov *: Markov
 
-proc newBot*(token, dbPath: string): Future[Bot] {.async.} =
+proc newBot*(token, dbPath, markovPath: string): Future[Bot] {.async.} =
   new(result)
   result.tg = newTelega(token)
   result.db = open(dbPath, nil, nil, nil)
   result.db.init
   result.me = await result.tg.getMe()
+  result.markov = newMarkov(markovPath)
 
 proc isCommand*(update: Update, bot: Bot, cmd: string): bool =
   if update.message.isNone:

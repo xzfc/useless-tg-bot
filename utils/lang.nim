@@ -1,4 +1,5 @@
 import ../sweet_options
+import ./markov_lib
 import ./randomEmoji
 import algorithm
 import future
@@ -156,7 +157,7 @@ proc generateMarkovPhrase(
       result.add word
     inc n
 
-proc mkReply*(s: string, nextMarkov: string -> string): Option[string] =
+proc mkReply*(s: string, m: Markov, chatId: int64): Option[string] =
   s.match(reWhether) ?-> match:
     let left = match.captures["left"]
     let right = match.captures["right"]
@@ -176,13 +177,9 @@ proc mkReply*(s: string, nextMarkov: string -> string): Option[string] =
     return (reply & ".").reversePerson.capitalize.some
 
   block:
-    let (first, rest) = s.split
-    var start = first.reversePersonWord
-    if start.isNil:
-      start = first
-    let text = generateMarkovPhrase(start, 20, nextMarkov)
+    let text = m.generate(chatId.int, s.reversePerson, 50)
     if text.len != 0:
-      return (start & " " & text & " " & randomEmoji()).capitalize.some
+      return (text.capitalize & " " & randomEmoji()).some
 
   return randomEmoji().some
 
