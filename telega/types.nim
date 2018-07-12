@@ -76,8 +76,8 @@ type
     leftChatMember             *: Option[User]
     newChatTitle               *: Option[string]
     newChatPhoto               *: Option[seq[PhotoSize]]
-    migrateToChatId            *: Option[int32]
-    migrateFromChatId          *: Option[int32]
+    migrateToChatId            *: Option[int64]
+    migrateFromChatId          *: Option[int64]
     pinnedMessage              *: ref Message
     invoice                    *: Option[Invoice]
     successfulPayment          *: Option[SuccessfulPayment]
