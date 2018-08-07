@@ -66,7 +66,7 @@ proc split(s: string): (string, string) =
   var okIdx = 0
   for rune, idx in s.runesIdx:
     if not rune.isAlpha:
-      return (s[0..okIdx-1], s[okIdx..^0])
+      return (s[0..okIdx-1], s[okIdx..^1])
     else:
       okIdx = idx
   return (s, "")
