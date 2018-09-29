@@ -26,8 +26,8 @@ proc maps(f:int, t: int, tmpl: string): string =
 
 const rank = 6
   ## Rank of the Markov chain.
-  ## I.e. only up to last `rank` tokens are taken into account in the process of
-  ## next token generation.
+  ## I.e. only up to last ``rank`` tokens are taken into account in the process
+  ## of next token generation.
 
 proc rankFill[T](s: seq[T], val: T): seq[T] =
   result = s
@@ -55,19 +55,19 @@ iterator tokenize*(s: string): string {.tags:[].} =
   ## Tokenize line.
   ## This function have following design goals:
   ## * Word and adjoining punctuation are separate tokens.
-  ##   e.g. "Hello!" should be tokenized as ["Hello", "!"].
-  ## * "..." and "?!" are a single token.
-  ## * But "»." tokenized as two separate tokens.
+  ##   e.g. ``"Hello!"`` should be tokenized as ``["Hello", "!"]``.
+  ## * ``"..."`` and ``"?!"`` are a single token.
+  ## * But ``"»."`` should be tokenized as two separate tokens.
   ## * Leading space is considered as part of the token.
   ##   Any non-zero number of whitespace characters (including tabs and
   ##   newlines) is replaced with one space.
   ## * Each of these is a single token:
-  ##   * https://example.com/
-  ##   * underscore_separated_words
-  ##   * #hashtag
-  ##   * @username
-  ## * "$start" and "$end" should not be valid tokens since they are used in
-  ##   this module as special values.
+  ##   * ``https://example.com/``
+  ##   * ``underscore_separated_words``
+  ##   * ``#hashtag``
+  ##   * ``@username``
+  ## * ``"$start"`` and ``"$end"`` should not be valid tokens since they are
+  ##   used in this module as special values.
   let ss = s.replace(escapeRe, r"\$0").replace(urlRe, "[$0]")
   proc getClass(c: Rune): int =
     const sa = "0123456789@_#".toRunes
@@ -164,7 +164,7 @@ proc insert(db: DbConn, chatId: int, messageId: int, n: Entry
 proc selectNext1(db:DbConn, chatId: int, tokens: seq[string],
                  messageIds: seq[int]): seq[Row] {.tags:[ReadDbEffect].} =
   ## Select all possible next tokens.
-  ## Requriments are strict: `tokens` are preceding tokens, `messageIds` are
+  ## Requriments are strict: ``tokens`` are preceding tokens, ``messageIds`` are
   ## prohibited message ids.
   var query = "SELECT next, message_id FROM markov WHERE chat_id = ?"
   var args = @[chatId.dbValue]
@@ -186,9 +186,9 @@ proc selectNext(db: DbConn, chatId: int, tokens: seq[string],
                   {.tags:[ReadDbEffect,WriteIOEffect].} =
   ## Select random next token.
   ## Requriments are not strict. Loose them if there are no matching candidates:
-  ## * When reverse:  use only a few first `tokens`.
-  ## * Uness reverse: use only a few last `tokens`.
-  ## * Ignore `messageIds`.
+  ## * When reverse:  use only a few first ``tokens``.
+  ## * Uness reverse: use only a few last ``tokens``.
+  ## * Ignore ``messageIds``.
   for i in 0..1: # 0 - prohibit messageIds; 1 - ignore messageIds
     if i == 1 and messageIds.len == 0:
       continue
@@ -233,7 +233,7 @@ proc generateInner(m: Markov, chatId: int, start: seq[string], limit: int
     nextStep ?-> (next, messageId, initialWords):
       if next == "$end":
         # Try to generate next token again to prevent too short result.
-        # The closer we are to `limit` the less trying again is likely.
+        # The closer we are to ``limit`` the less trying again is likely.
         if limit.sqr.rand > n.sqr:
           debug "  ..."
           continue
@@ -249,7 +249,7 @@ proc generateInner(m: Markov, chatId: int, start: seq[string], limit: int
 
 proc generate*(m: Markov, chatId: int, start: string, limit: int
               ): string {.tags:[ReadDbEffect,WriteIOEffect].} =
-  ## Generate text using first tokens of `start` as an prefix.
+  ## Generate text using first tokens of ``start`` as an prefix.
   ## If it is not possible, start from random first token.
   var tokens = map(toSeq(start.tokenize), s => s.toLower.strip)
   if tokens.len > rank:

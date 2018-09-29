@@ -3,12 +3,13 @@ import options
 import typetraits
 
 template optionType*[T](a: Option[T]): auto =
-  # Leaked implementation detail. Do not use.
+  ## Leaked implementation detail. Do not use.
   T
 
 template `?.`*[T](EXPR: Option[T], FIELD: untyped): auto =
-  # `foo?.bar` is either `foo.get.bar` or `none` depends of `foo.isNone`.
-  # Can be chained, e.g. `foo?.bar?.baz?.qux`
+  ## ``foo?.bar`` is either ``foo.get.bar`` or ``none`` depends of
+  ## ``foo.isNone``.
+  ## Can be chained, e.g. ``foo?.bar?.baz?.qux``
   let v = EXPR
   if v.isNone:
     none(v.get.FIELD.optionType)
@@ -16,17 +17,25 @@ template `?.`*[T](EXPR: Option[T], FIELD: untyped): auto =
     v.get.FIELD
 
 template `?:`*[T](val: Option[T], default: T): T =
-  # Elvis operator.
+  ## Elvis operator.
   val.get(default)
 
-proc valueExists*[T](x: Option[T]): bool = x.isSome
-proc valueExists*[T](x: ref T):     bool = x != nil
+proc valueExists*[T](x: Option[T]): bool =
+  ## Used by ``?->`` macro.
+  x.isSome
+proc valueExists*[T](x: ref T): bool =
+  ## Used by ``?->`` macro.
+  x != nil
 
-proc getValue*[T](x: Option[T]): T = x.get
-proc getValue*[T](x: ref T):     T = x[]
+proc getValue*[T](x: Option[T]): T =
+  ## Used by ``?->`` macro.
+  x.get
+proc getValue*[T](x: ref T): T =
+  ## Used by ``?->`` macro.
+  x[]
 
-proc newLetStmt2*(lhs, value: NimNode): NimNode {.compiletime.} =
-  ## Create a new let stmt
+proc newLetStmt2(lhs, value: NimNode): NimNode {.compiletime.} =
+  # Create a new let stmt
   var inner: NimNode
   if lhs.kind == nnkIdent:
     inner = newNimNode(nnkIdentDefs).add(lhs)
@@ -47,19 +56,25 @@ proc optionMatch(EXPR, IDENT, BODY, ELSE_BODY: NimNode): NimNode =
   return newStmtList(newLetStmt(v, EXPR), ifStmt)
 
 macro `?->`*(EXPR, IDENT, BODY, ELSE_BODY: untyped): untyped =
-  # Following code:
-  #
-  #   EXPR ?-> IDENT:
-  #     BODY
-  #
-  # Expands to:
-  #
-  #   let :v = EXPR
-  #   if :v.valueExists:
-  #     let IDENT = v.getValue
-  #     BODY
-  #
-  # Where EXPR have type Option[T] or ref T and IDENT have type T.
+  ## Following code:
+  ##
+  ## .. code-block:: Nim
+  ##   EXPR ?-> IDENT:
+  ##     BODY
+  ##   else:
+  ##     ELSE_BODY
+  ##
+  ## Expands to:
+  ##
+  ## .. code-block:: Nim
+  ##   let :v = EXPR
+  ##   if :v.valueExists:
+  ##     let IDENT = v.getValue
+  ##     BODY
+  ##   else:
+  ##     ELSE_BODY
+  ##
+  ## Where ``EXPR`` have type ``Option[T]|ref T`` and ``IDENT`` have type ``T``.
 
   assert IDENT.kind == nnkIdent or IDENT.kind == nnkPar
   assert BODY.kind == nnkStmtList
@@ -67,23 +82,21 @@ macro `?->`*(EXPR, IDENT, BODY, ELSE_BODY: untyped): untyped =
   return optionMatch(EXPR, IDENT, BODY, ELSE_BODY)
 
 macro `?->`*(EXPR, IDENT, BODY: untyped): untyped =
-  # Following code:
-  #
-  #   EXPR ?-> IDENT:
-  #     BODY
-  #   else:
-  #     ELSE_BODY
-  #
-  # Expands to:
-  #
-  #   let :v = EXPR
-  #   if :v.valueExists:
-  #     let IDENT = v.getValue
-  #     BODY
-  #   else:
-  #     ELSE_BODY
-  #
-  # Where EXPR have type Option[T] or ref T and IDENT have type T.
+  ## Following code:
+  ##
+  ## .. code-block:: Nim
+  ##   EXPR ?-> IDENT:
+  ##     BODY
+  ##
+  ## Expands to:
+  ##
+  ## .. code-block:: Nim
+  ##   let :v = EXPR
+  ##   if :v.valueExists:
+  ##     let IDENT = v.getValue
+  ##     BODY
+  ##
+  ## Where ``EXPR`` have type ``Option[T]|ref T`` and ``IDENT`` have type ``T``.
 
   assert IDENT.kind == nnkIdent or IDENT.kind == nnkPar
   assert BODY.kind == nnkStmtList
