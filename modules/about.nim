@@ -80,8 +80,8 @@ proc fullNameRating(user: DbUser): string =
     "<a href=\"tg://user?id=" & $user.id & "\">" & name & "</a>"
 
 proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
-  proc renderTime(t: Time): string =
-    if t < 1514764800.Time:
+  proc renderTime(t: int64): string =
+    if t < 1514764800:
       ", 2017"
     else:
       ""
@@ -96,8 +96,8 @@ proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
     rows.map(renderRow).join("\n")
 
 proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
-  proc renderTime(t: Time): string =
-    if t < 1514764800.Time:
+  proc renderTime(t: int64): string =
+    if t < 1514764800:
       " <i>(2017)</i>"
     else:
       ""
@@ -112,8 +112,8 @@ proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
     rows.map(renderRow).join("\n")
 
 proc renderLatestRows(rows: seq[OpinionRow]): string =
-  proc renderTime(t: Time): string =
-    if t < 1514764800.Time:
+  proc renderTime(t: int64): string =
+    if t < 1514764800:
       ", 2017"
     else:
       ""

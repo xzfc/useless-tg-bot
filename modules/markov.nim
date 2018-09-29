@@ -7,12 +7,12 @@ import ../utils/lang
 import ../utils/markov_lib
 import asyncdispatch
 import db_sqlite
-import future
 import nre
 import options
 import random
 import sequtils
 import strutils
+import sugar
 
 MODULE()
 

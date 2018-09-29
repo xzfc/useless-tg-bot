@@ -1,5 +1,4 @@
-import ./db_sqlite_extras
-import db_sqlite
+import ndb/sqlite
 import options
 import sequtils
 import strutils
@@ -18,39 +17,33 @@ type
     author   *: DbUser
     subj     *: DbUser
     text     *: string
-    datetime *: Time
+    datetime *: int64
   OpinionRatingRow* = object
     user     *: DbUser
     asAuthor *: uint
     asSubj   *: uint
   MarkovNextRow* = object
-    word  *: string
+    word  *: Option[string]
     count *: uint
 
-proc getNil(s: Option[string]): string =
-  if s.isSome:
-    return s.get
-  else:
-    return nil
-
-proc putNil(s: string): Option[string] =
-  if s.isNil or s.len == 0: # TODO: why NULL isn't nil?
+proc putNil(v: DbValue): Option[string] =
+  if v.kind == dvkNull:
     none(string)
   else:
-    some(s)
+    some(v.s)
 
-proc get_0(row: Row): string = row[0]
+proc get_0(row: Row): string = row[0].s
 
-proc get_0int(row: Row): int = row[0].parseInt
+proc get_0int(row: Row): int = row[0].i.int
 
-proc get_0int64(row: Row): int64 = row[0].parseBiggestInt.int64
+proc get_0int64(row: Row): int64 = row[0].i
 
 proc getUser(row: Row, idx: int): DbUser =
-  result.id         = row[idx+0].parseInt.int32
-  result.first_name = row[idx+1]
+  result.id         = row[idx+0].i.int32
+  result.first_name = row[idx+1].s
   result.last_name  = row[idx+2].putNil
   result.username   = row[idx+3].putNil
-  result.deleted    = row[idx+4].parseInt != 0
+  result.deleted    = row[idx+4].i != 0
 
 proc getUser(row: Row): DbUser =
   getUser(row, 0)
@@ -58,17 +51,17 @@ proc getUser(row: Row): DbUser =
 proc getOpinionRow(r: Row): OpinionRow =
   result.author   = getUser(r, 0)
   result.subj     = getUser(r, 5)
-  result.text     = r[10]
-  result.datetime = r[11].parseInt.Time
+  result.text     = r[10].s
+  result.datetime = r[11].i
 
 proc getOpinionRatingRow(r: Row): OpinionRatingRow =
   result.user     = getUser(r, 0)
-  result.asAuthor = r[5].parseUint
-  result.asSubj   = r[6].parseUint
+  result.asAuthor = r[5].i.uint
+  result.asSubj   = r[6].i.uint
 
 proc getMarkovNextRow(r: Row): MarkovNextRow =
-  result.word  = if r[0].len == 0: nil else: r[0]
-  result.count = r[1].parseUint
+  result.word  = r[0].putNil
+  result.count = r[1].i.uint
 
 proc toUser*(user: DbUser): User =
   result.id = user.id
@@ -77,7 +70,7 @@ proc toUser*(user: DbUser): User =
   result.username = user.username
 
 proc init*(db: DbConn) =
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS users (
       uid        INTEGER,
       first      TEXT,
@@ -86,13 +79,13 @@ proc init*(db: DbConn) =
       deleted    BOOLEAN,
       PRIMARY KEY (uid)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS chat_history (
       chat_id    INTEGER,
       author_uid INTEGER,
       text       TEXT
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS opinions (
       cluster_id INTEGER,
       author_uid INTEGER,
@@ -101,28 +94,28 @@ proc init*(db: DbConn) =
       datetime   DATETIME,
       PRIMARY KEY (cluster_id, author_uid, subj_uid)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS last_user_message (
       chat_id    INTEGER,
       user_id    INTEGER,
       message_id INTEGER,
       PRIMARY KEY (chat_id, user_id)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS last_user_document (
       chat_id    INTEGER,
       user_id    INTEGER,
       file_id    INTEGER NOT NULL,
       PRIMARY KEY (chat_id, user_id)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS chats (
       chat_id    INTEGER,
       name       TEXT,
       cluster_id INTEGER,
       PRIMARY KEY (chat_id)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS deletable_messages (
       chat_id    INTEGER,
       message_id INTEGER,
@@ -130,12 +123,12 @@ proc init*(db: DbConn) =
       datetime   DATETIME NOT NULL,
       PRIMARY KEY (chat_id, message_id)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS buzzers (
       chat_id,
       PRIMARY KEY (chat_id)
     )"""
-  db.execEx sql"""
+  db.exec sql"""
     CREATE TABLE IF NOT EXISTS user_history (
       uid        INTEGER,
       type       INTEGER,
@@ -151,7 +144,7 @@ proc init*(db: DbConn) =
 
 proc rememberUserHistory(db: DbConn, id: int32, kind: int32,
                          value: string, now: int32) =
-  db.execEx sql"""
+  db.exec sql"""
     INSERT OR REPLACE
       INTO user_history
     VALUES (?1, ?2, ?3,
@@ -165,7 +158,7 @@ proc rememberUserHistory(db: DbConn, id: int32, kind: int32,
 
 proc rememberUser*(db: DbConn, user: User, now: int32) =
   if user.username.isSome:
-    db.execEx sql"""
+    db.exec sql"""
                 UPDATE users
                    SET uname = NULL
                  WHERE uname = ?
@@ -173,22 +166,22 @@ proc rememberUser*(db: DbConn, user: User, now: int32) =
               """,
               user.username.get
   if user.isDeleted:
-    db.execEx sql"""
+    db.exec sql"""
                 UPDATE users
                    SET deleted = 1
                  WHERE uid = ?
               """,
               user.id
   else:
-    db.execEx sql"""
+    db.exec sql"""
                 INSERT OR REPLACE
                   INTO users
                 VALUES (?, ?, ?, ?, 0)
               """,
               user.id,
               user.first_name,
-              user.last_name.getNil,
-              user.username.getNil
+              user.last_name,
+              user.username
     db.rememberUserHistory(user.id, 0, user.fullName, now)
     if user.username.isSome:
       db.rememberUserHistory(user.id, 1, user.username.get, now)
@@ -200,7 +193,7 @@ proc searchUserByUid*(db: DbConn, uid: int32): Option[DbUser] =
      WHERE uid = ?
      LIMIT 1
   """
-  return db.optionalRow(query, uid).map(getUser)
+  return db.getRow(query, uid).map(getUser)
 
 proc searchUserByUname*(db: DbConn, uname: string): Option[DbUser] =
   let query = sql"""
@@ -210,7 +203,7 @@ proc searchUserByUname*(db: DbConn, uname: string): Option[DbUser] =
        AND NOT deleted
      LIMIT 1
   """
-  return db.optionalRow(query, uname).map(getUser)
+  return db.getRow(query, uname).map(getUser)
 
 proc searchUserHistory*(db: DbConn, uid: int32
                        ): tuple[fullName: seq[string], uname: seq[string]] =
@@ -221,8 +214,8 @@ proc searchUserHistory*(db: DbConn, uid: int32
        AND type = ?
      ORDER BY last_seen
   """
-  return (db.allRows(query, uid, 0).map(get_0),
-          db.allRows(query, uid, 1).map(get_0))
+  return (db.getAllRows(query, uid, 0).map(get_0),
+          db.getAllRows(query, uid, 1).map(get_0))
 
 ##
 ## opinions
@@ -240,7 +233,7 @@ proc searchOpinionsBySubjUid*(db: DbConn, chatId: int64,
        AND o.subj_uid = ?
      ORDER BY datetime DESC
   """
-  return db.allRows(query, chatId, subjUid).map(getOpinionRow)
+  return db.getAllRows(query, chatId, subjUid).map(getOpinionRow)
 
 proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
                                 authorUid: int): seq[OpinionRow] =
@@ -254,7 +247,7 @@ proc searchOpinionsByAuthorUid*(db: DbConn, chatId: int64,
        AND o.author_uid = ?
      ORDER BY datetime DESC
   """
-  return db.allRows(query, chatId, authorUid).map(getOpinionRow)
+  return db.getAllRows(query, chatId, authorUid).map(getOpinionRow)
 
 proc searchOpinionsLatest*(db: DbConn, chatId: int64,
                            limit: int): seq[OpinionRow] =
@@ -268,7 +261,7 @@ proc searchOpinionsLatest*(db: DbConn, chatId: int64,
      ORDER BY datetime DESC
      LIMIT ?
   """
-  return db.allRows(query, chatId, limit).map(getOpinionRow)
+  return db.getAllRows(query, chatId, limit).map(getOpinionRow)
 
 proc searchOpinionsRating*(db: DbConn, chatId: int64): seq[OpinionRatingRow] =
   # TODO: use only one INNER JOIN?
@@ -295,7 +288,7 @@ proc searchOpinionsRating*(db: DbConn, chatId: int64): seq[OpinionRatingRow] =
     WHERE cnt_a + cnt_s != 0
     ORDER BY cnt_a + cnt_s*2 DESC
   """
-  return db.allRows(query, chatId, chatId).map(getOpinionRatingRow)
+  return db.getAllRows(query, chatId, chatId).map(getOpinionRatingRow)
 
 proc rememberOpinion*(db: DbConn, chatId: int64,
                       authorUid, subjUid: int,
@@ -307,7 +300,7 @@ proc rememberOpinion*(db: DbConn, chatId: int64,
       FROM chats
      WHERE chat_id = ?
   """
-  db.execEx(query, authorUid, subjUid, text, chatId)
+  db.exec(query, authorUid, subjUid, text, chatId)
 
 proc forgetOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int) =
@@ -319,7 +312,7 @@ proc forgetOpinion*(db: DbConn, chatId: int64,
        AND author_uid = ?
        AND subj_uid = ?
   """
-  db.execEx(query, chatId, authorUid, subjUid)
+  db.exec(query, chatId, authorUid, subjUid)
 
 proc searchOpinion*(db: DbConn, chatId: int64,
                     authorUid, subjUid: int): Option[OpinionRow] =
@@ -334,7 +327,7 @@ proc searchOpinion*(db: DbConn, chatId: int64,
        AND o.subj_uid = ?
      LIMIT 1
   """
-  return db.optionalRow(query, chatId, authorUid, subjUid).map(getOpinionRow)
+  return db.getRow(query, chatId, authorUid, subjUid).map(getOpinionRow)
 
 
 ##
@@ -348,7 +341,7 @@ proc rememberLastUserMessage*(db: DbConn, chatId: int64, userId: int,
       INTO last_user_message
     VALUES (?, ?, ?)
   """
-  db.execEx(query, chatId, userId, messageId)
+  db.exec(query, chatId, userId, messageId)
 
 proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
   const query = sql"""
@@ -357,7 +350,7 @@ proc getLastUserMessage*(db: DbConn, chatId: int64, userId: int): Option[int] =
      WHERE chat_id = ?
        AND user_id = ?
   """
-  db.optionalRow(query, chatId, userId).map(get_0int)
+  db.getRow(query, chatId, userId).map(get_0int)
 
 ##
 ## last_user_document
@@ -370,7 +363,7 @@ proc rememberLastUserDocument*(db: DbConn, chatId: int64, userId: int,
       INTO last_user_document
     VALUES (?, ?, ?)
   """
-  db.execEx(query, chatId, userId, documentId)
+  db.exec(query, chatId, userId, documentId)
 
 proc getLastUserDocument*(db: DbConn, chatId: int64, userId: int
                          ): Option[string] =
@@ -380,7 +373,7 @@ proc getLastUserDocument*(db: DbConn, chatId: int64, userId: int
      WHERE chat_id = ?
        AND user_id = ?
   """
-  db.optionalRow(query, chatId, userId).map(get_0)
+  db.getRow(query, chatId, userId).map(get_0)
 
 
 ##
@@ -396,7 +389,7 @@ proc rememberChat*(db: DbConn, chatId: int64, name: string) =
                         FROM chats
                        WHERE chat_id = ?), ?))
   """
-  db.execEx(query, chatId, name, chatId, chatId)
+  db.exec(query, chatId, name, chatId, chatId)
 
 proc rememberChatUser*(db: DbConn, userId: int64, name: string, chatId: int64) =
   const query = sql"""
@@ -404,14 +397,14 @@ proc rememberChatUser*(db: DbConn, userId: int64, name: string, chatId: int64) =
       INTO chats
     VALUES (?, ?, (SELECT cluster_id FROM chats WHERE chat_id = ?))
   """
-  db.execEx(query, userId, name, chatId)
+  db.exec(query, userId, name, chatId)
 
 proc forgetChatUser*(db: DbConn, userId: int64) =
   const query = sql"""
     DELETE FROM chats
      WHERE chat_id = ?
   """
-  db.execEx(query, userId)
+  db.exec(query, userId)
 
 ##
 ## deletable_messages
@@ -424,7 +417,7 @@ proc rememberDeletable*(db: DbConn, chatId: int64, messageId: int,
       INTO deletable_messages
     VALUES (?, ?, ?, CAST(STRFTIME('%s', 'now') AS INT))
   """
-  db.execEx(query, chatId, messageId, userId)
+  db.exec(query, chatId, messageId, userId)
 
 proc forgetDeletable*(db: DbConn, chatId: int64, messageId: int) =
   const query = sql"""
@@ -433,7 +426,7 @@ proc forgetDeletable*(db: DbConn, chatId: int64, messageId: int) =
      WHERE chat_id = ?
        AND message_id = ?
   """
-  db.execEx(query, chatId, messageId)
+  db.exec(query, chatId, messageId)
 
 proc haveDeletable*(db: DbConn, chatId: int64, messageId: int, 
                     userId: int32): bool =
@@ -445,7 +438,7 @@ proc haveDeletable*(db: DbConn, chatId: int64, messageId: int,
        AND (user_id = ? OR user_id IS NULL)
      LIMIT 1
   """
-  db.optionalRow(query, chatId, messageId, userId).isSome
+  db.getRow(query, chatId, messageId, userId).isSome
 
 
 ##
@@ -457,4 +450,4 @@ proc getBuzzers*(db: DbConn): seq[int64] =
     SELECT chat_id
       FROM buzzers
   """
-  db.allRows(query).map(get_0int64)
+  db.getAllRows(query).map(get_0int64)

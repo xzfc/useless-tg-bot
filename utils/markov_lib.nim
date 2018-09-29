@@ -1,11 +1,10 @@
-import ../db_sqlite_extras
 import ../sweet_options
-import db_sqlite
-import future
+import ndb/sqlite
 import nre except toSeq
 import random
 import sequtils
 import strutils except toLower
+import sugar
 import unicode
 
 type
@@ -129,7 +128,7 @@ iterator tokenize*(s: string): string {.tags:[].} =
   yi
 
 iterator makeEntries(line: string): Entry {.tags:[].} =
-  var r = Entry(next: nil, tokens: @["$start"])
+  var r = Entry(next: "", tokens: @["$start"])
   for token in line.tokenize:
     r.next = token
     yield r
@@ -159,8 +158,8 @@ proc insert(db: DbConn, chatId: int, messageId: int, n: Entry
     VALUES (?, ?, ?""" & maps(1, rank, ", ?") & ")")
   let args =
     @[chatId.dbValue, messageId.dbValue, n.next.dbValue] &
-    map(n.tokens.rankFill nil, dbValue)
-  db.execEx(query, @args)
+    map(n.tokens, dbValue).rankFill dbNilValue
+  db.exec(query, @args)
 
 proc selectNext1(db:DbConn, chatId: int, tokens: seq[string],
                  messageIds: seq[int]): seq[Row] {.tags:[ReadDbEffect].} =
@@ -179,7 +178,7 @@ proc selectNext1(db:DbConn, chatId: int, tokens: seq[string],
     query &= "AND message_id NOT in(" &
              "?".repeat(messageIds.len).join(",") & ")"
     args &= map(messageIds, dbValue)
-  return db.allRows(query.SqlQuery, @args)
+  return db.getAllRows(query.SqlQuery, @args)
 
 proc selectNext(db: DbConn, chatId: int, tokens: seq[string],
                 messageIds: seq[int], reverse: bool
@@ -203,12 +202,12 @@ proc selectNext(db: DbConn, chatId: int, tokens: seq[string],
           (if i == 0: " " else: "/"),
           $rows.len,
           tokensD.join(" "),
-          row[0]
+          row[0].s
         ]
-        return (row[0], row[1].parseInt, tokensD).some
+        return (row[0].s, row[1].i.int, tokensD).some
 
 proc newMarkov*(dbPath: string): Markov {.tags:[DbEffect].} =
-  result.db = open(dbPath, nil, nil, nil)
+  result.db = open(dbPath, "", "", "")
   result.inTransaction = false
   for i in initQueries():
     result.db.exec i.SqlQuery
@@ -217,7 +216,7 @@ proc learn*(m: Markov, chatId: int, messageId: int, line: string,
             transaction: bool = true) {.tags:[ReadDbEffect,WriteDbEffect].} =
   if transaction:
     m.db.exec sql"BEGIN TRANSACTION"
-  m.db.execEx(sql"DELETE FROM markov WHERE chat_id = ? AND message_id = ?",
+  m.db.exec(sql"DELETE FROM markov WHERE chat_id = ? AND message_id = ?",
               chatId, messageId)
   for entry in line.makeEntries:
     m.db.insert(chatId, messageId, entry)

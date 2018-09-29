@@ -4,7 +4,7 @@ import ./telega/types
 import ./utils/markov_lib
 import algorithm
 import asyncdispatch
-import db_sqlite
+import ndb/sqlite
 import options
 import strutils
 
@@ -18,7 +18,7 @@ type
 proc newBot*(token, dbPath, markovPath: string): Future[Bot] {.async.} =
   new(result)
   result.tg = newTelega(token)
-  result.db = open(dbPath, nil, nil, nil)
+  result.db = open(dbPath, "", "", "")
   result.db.init
   result.me = await result.tg.getMe()
   result.markov = newMarkov(markovPath)

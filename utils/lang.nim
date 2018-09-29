@@ -2,11 +2,11 @@ import ../sweet_options
 import ./markov_lib
 import ./randomEmoji
 import algorithm
-import future
 import nre
 import random
 import sequtils
 import strutils except toLower, capitalize
+import sugar
 import unicode
 import unittest
 
@@ -49,18 +49,18 @@ const
 proc isPronoun(s: string): bool =
   pro1per.contains(s) or pro2per.contains(s) or proRest.contains(s)
 
-proc reversePersonWord(s: string): string =
+proc reversePersonWord(s: string): Option[string] =
   var id: int
 
   id = pro1per.find(s)
   if id != -1:
-    return pro2per[id]
+    return pro2per[id].some
 
   id = pro2per.find(s)
   if id != -1:
-    return pro1per[id]
+    return pro1per[id].some
 
-  return nil
+  return string.none
 
 proc split(s: string): (string, string) =
   var okIdx = 0
@@ -74,17 +74,17 @@ proc split(s: string): (string, string) =
 proc reversePerson(s: string): string =
   let (first, rest) = s.split
   let reversed = first.toLower.reversePersonWord
-  if reversed.isNil:
+  if reversed.isNone:
     s
   else:
-    reversed.capitalize & rest
+    reversed.unsafeGet.capitalize & rest
 
 suite "pronouns":
   test "reversePersonWord":
-    check reversePersonWord("мне") == "тебе"
-    check reversePersonWord("вам") == "нам"
-    check reversePersonWord("его") == nil
-    check reversePersonWord("мне тебе") == nil
+    check reversePersonWord("мне") == "тебе".some
+    check reversePersonWord("вам") == "нам".some
+    check reversePersonWord("его") == string.none
+    check reversePersonWord("мне тебе") == string.none
 
   test "split":
     check split("foo bar") == ("foo", " bar")
@@ -145,16 +145,16 @@ proc choice[T](a: seq[T]): T =
 
 proc generateMarkovPhrase(
     start: string, maxLen: int,
-    next: string -> string): string =
+    next: string -> Option[string]): string =
   result = ""
   var n = 0
-  var word = start
-  while not word.isNil and n <= maxLen:
-    word = next(word)
-    if not word.isNil:
+  var word = start.some
+  while word.isSome and n <= maxLen:
+    word = next(word.unsafeGet)
+    if word.isSome:
       if result.len != 0:
         result.add " "
-      result.add word
+      result.add word.unsafeGet
     inc n
 
 proc mkReply*(s: string, m: Markov, chatId: int64): Option[string] =

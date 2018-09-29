@@ -70,7 +70,7 @@ proc fullName*(user: User): string =
     user.firstName
 
 proc isDeleted*(user: User): bool =
-  user.firstName.isNilOrEmpty and
+  user.firstName.len == 0 and
     user.lastName.isNone and
     user.username.isNone
 
