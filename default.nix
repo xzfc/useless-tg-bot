@@ -25,8 +25,8 @@ let
     (fetchFromGitHub {
       owner  = "xzfc";
       repo   = "ndb.nim";
-      rev    = "20e87a8e4067cdd54d658487404c87b263ca1f87";
-      sha256 = "06547himxyk5npzypdkgvjzwl9bbmdfdw9scjg7b1n0vwgrlg0k2";
+      rev    = "v0.19.3";
+      sha256 = "0af0b9ws1i95bsdwx3sgy5vp49bxxz8psf2c1ck00z7d8vi98czf";
     })
   ];
 in

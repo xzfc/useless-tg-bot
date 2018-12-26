@@ -158,7 +158,7 @@ proc insert(db: DbConn, chatId: int, messageId: int, n: Entry
     VALUES (?, ?, ?""" & maps(1, rank, ", ?") & ")")
   let args =
     @[chatId.dbValue, messageId.dbValue, n.next.dbValue] &
-    map(n.tokens, dbValue).rankFill dbNilValue
+    map(n.tokens, dbValue).rankFill(dbValue DbNull())
   db.exec(query, @args)
 
 proc selectNext1(db:DbConn, chatId: int, tokens: seq[string],
