@@ -1,4 +1,4 @@
 /autogen_modules.nim
 /main
 /utils/markov_cli
-nimcache
+/result
