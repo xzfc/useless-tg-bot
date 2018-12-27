@@ -1,3 +1,6 @@
+# This file is a part of xzfc/useless-tg-bot.
+# This is free and unencumbered software released into the public domain.
+
 import ../sweet_options
 import ndb/sqlite
 import nre except toSeq
