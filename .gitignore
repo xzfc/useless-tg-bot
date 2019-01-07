@@ -3,3 +3,5 @@
 /utils/markov_cli
 /result
 nimcache
+*.po~
+*.mo

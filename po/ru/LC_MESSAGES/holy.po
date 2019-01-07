@@ -1,0 +1,20 @@
+msgid ""
+msgstr ""
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-01-07 17:22+0700\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: modules/control.nim:29
+msgid "!control-help!"
+msgstr ""
+  "<code>/control forget-identity</code>\n"
+  "  — забыть имена и юзернеймы в /identity"
+
+#: modules/control.nim:18
+msgid "Forgot $1 entry!"
+msgid_plural "Forgot $1 entries!"
+msgstr[0] "Забыла $1 запись!"
+msgstr[1] "Забыла $1 записи!"
+msgstr[2] "Забыла $1 записей!"

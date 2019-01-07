@@ -33,7 +33,7 @@ in
 stdenv.mkDerivation {
   name = "useless-tg-bot";
   buildInputs = [ sqlite pcre openssl ];
-  nativeBuildInputs = [ nim-current ];
+  nativeBuildInputs = [ nim-current gettext ];
   src = builtins.filterSource (path: _:
     builtins.all (p: path != builtins.toString p) [
       ./.git
@@ -42,14 +42,16 @@ stdenv.mkDerivation {
       ./main
       ./utils/markov_cli
       ./result
+      ./nimcache
+    ] &&
+    !builtins.any (p: builtins.isList (builtins.match p path)) [
+      ".*.mo$"
+      ".*.po~$"
     ]) ./.;
   doConfigure = false;
-  buildPhase = ''
-    nim $NIM_FLAGS --nimcache:nimcache c main
-    nim $NIM_FLAGS --nimcache:nimcache c utils/markov_cli
-  '';
   installPhase = ''
     install -Dt $out main utils/markov_cli
+    install -DT {,"$out/"}po/ru/LC_MESSAGES/holy.mo
   '';
   LD_LIBRARY_PATH =
     if lib.inNixShell

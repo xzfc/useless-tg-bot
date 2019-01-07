@@ -4,6 +4,7 @@
 import ./bot
 import ./telega/req
 import asyncdispatch
+import cgettext
 import macros
 import os
 import random
@@ -18,6 +19,7 @@ prepareModules()
 proc main(token, dbPath, logPath, markovPath: string) {.async.} =
   let logFile = open(logPath, mode = fmAppend)
   let bot = await newBot(token, dbPath, markovPath)
+  gettextInit()
   while true:
     let updates = await bot.tg.getUpdates(logFile = logFile)
     for update in updates:
