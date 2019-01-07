@@ -2,12 +2,12 @@
 # This is free and unencumbered software released into the public domain.
 
 import ../sweet_options
+import future
 import ndb/sqlite
 import nre except toSeq
 import random
 import sequtils
 import strutils except toLower
-import sugar
 import unicode
 
 type

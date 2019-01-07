@@ -5,11 +5,11 @@ import ../sweet_options
 import ./markov_lib
 import ./randomEmoji
 import algorithm
+import future
 import nre
 import random
 import sequtils
 import strutils except toLower, capitalize
-import sugar
 import unicode
 import unittest
 

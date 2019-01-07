@@ -20,7 +20,7 @@ let
       postPatch = '' rm -rf tests '';
       buildPhase = ''export LD=$CC XDG_CACHE_HOME=$PWD/.cache;'' + attrs.buildPhase;
     });
-  nim-current = nim-common "0.19.0" "0biwvw1gividp5lkf0daq1wp9v6ms4xy6dkf5zj0sn9w4m3n76d1";
+  nim-current = nim-common "0.18.0" "1l1vdygbgs5fdh2ffdjapcp90p8f6cbsw4hivndgm3gh6pdlmis5";
   nim-deps = [
     (fetchFromGitHub {
       owner  = "xzfc";
