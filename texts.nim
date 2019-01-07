@@ -33,3 +33,9 @@ const
     <b>Юзернеймы</b>:
     $4
   """
+
+  control* = unindent"""
+    <code>/control forget-identity</code>
+      — забыть имена и юзернеймы в /identity
+  """
+  controlForgetIdentityDone* = "Забыла $1 записей!"

@@ -189,6 +189,13 @@ proc rememberUser*(db: DbConn, user: User, now: int32) =
     if user.username.isSome:
       db.rememberUserHistory(user.id, 1, user.username.get, now)
 
+proc clearUserHistory*(db: DbConn, uid: int32): int64 =
+  result = db.execAffectedRows(sql"""
+                                   DELETE
+                                     FROM user_history
+                                    WHERE uid = ?
+                                 """, uid)
+
 proc searchUserByUid*(db: DbConn, uid: int32): Option[DbUser] =
   let query = sql"""
     SELECT *
