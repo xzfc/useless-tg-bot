@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-01-07 18:10+0700\n"
+"POT-Creation-Date: 2019-01-09 00:39+0700\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,8 +18,55 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: modules/control.nim:29
-msgid "!control-help!"
+#: modules/about.nim:97
+msgctxt "about"
+msgid "!no-about! $1"
+msgstr ""
+
+#: modules/about.nim:113
+msgctxt "about"
+msgid "!no-about-by! $1"
+msgstr ""
+
+#: modules/about.nim:129 modules/about.nim:140
+msgctxt "about"
+msgid "!empty-rating!"
+msgstr ""
+
+#: modules/about.nim:185 modules/about.nim:206 modules/about.nim:242
+#: modules/annoy.nim:28
+msgctxt "about"
+msgid "!unknown-user! $1"
+msgstr ""
+
+#: modules/about.nim:199
+msgctxt "about"
+msgid "Deleted!"
+msgstr ""
+
+#: modules/about.nim:203
+msgctxt "about"
+msgid "!cant-delete!"
+msgstr ""
+
+#: modules/about.nim:221
+msgctxt "about"
+msgid "!help!"
+msgstr ""
+
+#: modules/about.nim:230
+msgctxt "about"
+msgid "!cant-add!"
+msgstr ""
+
+#: modules/about.nim:238
+msgctxt "about"
+msgid "Updated!"
+msgstr ""
+
+#: modules/about.nim:240
+msgctxt "about"
+msgid "Added!"
 msgstr ""
 
 #: modules/control.nim:18
@@ -27,3 +74,20 @@ msgid "Forgot $1 entry!"
 msgid_plural "Forgot $1 entries!"
 msgstr[0] ""
 msgstr[1] ""
+
+#: modules/control.nim:29
+msgid "!control-help!"
+msgstr ""
+
+#: modules/delete.nim:34
+msgctxt "delete"
+msgid "nah"
+msgstr ""
+
+#: modules/identity.nim:49
+msgctxt "identity"
+msgid ""
+"!identity! id=$1 name=$2\n"
+"$3\n"
+"$4"
+msgstr ""

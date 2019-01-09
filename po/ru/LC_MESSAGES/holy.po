@@ -1,16 +1,68 @@
 msgid ""
 msgstr ""
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-01-07 17:22+0700\n"
+"POT-Creation-Date: 2019-01-09 00:39+0700\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: modules/control.nim:29
-msgid "!control-help!"
+#: modules/about.nim:97
+msgctxt "about"
+msgid "!no-about! $1"
+msgstr "Ещё никто не говорил о $1."
+
+#: modules/about.nim:113
+msgctxt "about"
+msgid "!no-about-by! $1"
+msgstr "$1 ещё ни о ком не говорил."
+
+#: modules/about.nim:129 modules/about.nim:140
+msgctxt "about"
+msgid "!empty-rating!"
+msgstr "But nobody came."
+
+#: modules/about.nim:185 modules/about.nim:206 modules/about.nim:242
+#: modules/annoy.nim:28
+msgctxt "about"
+msgid "!unknown-user! $1"
+msgstr "Не видела тут $1."
+
+#: modules/about.nim:199
+msgctxt "about"
+msgid "Deleted!"
+msgstr "Удалила!"
+
+#: modules/about.nim:203
+msgctxt "about"
+msgid "!cant-delete!"
+msgstr "Удалять записи можно только в группе."
+
+#: modules/about.nim:221
+msgctxt "about"
+msgid "!help!"
 msgstr ""
-  "<code>/control forget-identity</code>\n"
-  "  — забыть имена и юзернеймы в /identity"
+"Примеры команд:\n"
+"@$1 -- сплетница\n"
+"/about me\n"
+"/about @$1\n"
+"/about by @$1\n"
+"/about del @$1\n"
+"/about rating"
+
+#: modules/about.nim:230
+msgctxt "about"
+msgid "!cant-add!"
+msgstr "Добавлять записи можно только в группе."
+
+#: modules/about.nim:238
+msgctxt "about"
+msgid "Updated!"
+msgstr "Переписала!"
+
+#: modules/about.nim:240
+msgctxt "about"
+msgid "Added!"
+msgstr "Записала!"
 
 #: modules/control.nim:18
 msgid "Forgot $1 entry!"
@@ -18,3 +70,28 @@ msgid_plural "Forgot $1 entries!"
 msgstr[0] "Забыла $1 запись!"
 msgstr[1] "Забыла $1 записи!"
 msgstr[2] "Забыла $1 записей!"
+
+#: modules/control.nim:29
+msgid "!control-help!"
+msgstr ""
+"<code>/control forget-identity</code>\n"
+"  — забыть имена и юзернеймы в /identity"
+
+#: modules/delete.nim:34
+msgctxt "delete"
+msgid "nah"
+msgstr "не"
+
+#: modules/identity.nim:49
+msgctxt "identity"
+msgid ""
+"!identity! id=$1 name=$2\n"
+"$3\n"
+"$4"
+msgstr ""
+"<b>ID</b>: $1\n"
+"<b>Ссылка</b>: <a href=\"tg://user?id=$1\">$2</a>\n"
+"<b>Имена</b>:\n"
+"$3\n"
+"<b>Юзернеймы</b>:\n"
+"$4"

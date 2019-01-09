@@ -2,12 +2,12 @@
 # This is free and unencumbered software released into the public domain.
 
 import ../bot
+import ../cgettext
 import ../db
 import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
-import ../texts
 import ./ids
 import asyncdispatch
 import options
@@ -46,7 +46,7 @@ proc process(bot: Bot, update: Update) {.async.} =
   block:
     let target = message.getTarget.getOrBreak
     let history = db.searchUserHistory(bot.db, target.id)
-    let text = texts.identity % @[
+    let text = pgettext("identity", "!identity! id=$1 name=$2\n$3\n$4") % @[
         $target.id,
         target.fullName.htmlEscape,
         history.fullName.listNames "",

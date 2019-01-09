@@ -2,13 +2,13 @@
 # This is free and unencumbered software released into the public domain.
 
 import ../bot
+import ../cgettext
 import ../db
-import ../telega/yoba
 import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
-import ../texts
+import ../telega/yoba
 import asyncdispatch
 import db_sqlite
 import json
@@ -94,7 +94,7 @@ proc renderRowsAbout(subj: User, rows: seq[OpinionRow]): string =
       row.author.fullName,
       row.datetime.renderTime]
   if rows.len == 0:
-    texts.aboutNoAbout % [subj.fullName.htmlEscape]
+    pgettext("about", "!no-about! $1") % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
@@ -110,7 +110,7 @@ proc renderRowsBy(subj: User, rows: seq[OpinionRow]): string =
       row.text,
       row.datetime.renderTime]
   if rows.len == 0:
-    texts.aboutNoAboutBy % [subj.fullName.htmlEscape]
+    pgettext("about", "!no-about-by! $1") % [subj.fullName.htmlEscape]
   else:
     rows.map(renderRow).join("\n")
 
@@ -126,7 +126,7 @@ proc renderLatestRows(rows: seq[OpinionRow]): string =
       row.text,
       row.author.fullName]
   if rows.len == 0:
-    texts.aboutEmptyRating
+    pgettext("about", "!empty-rating!")
   else:
     rows.map(renderRow).join("\n")
 
@@ -137,7 +137,7 @@ proc renderRatingRows(rows: seq[OpinionRatingRow]): string =
       ($row.asAuthor).align 2,
       row.user.fullNameRating]
   if rows.len == 0:
-    texts.aboutEmptyRating
+    pgettext("about", "!empty-rating!")
   else:
     rows.map(renderRow).join("\n")
 
@@ -182,7 +182,7 @@ proc process(bot: Bot, update: Update) {.async.} =
         let rows = bot.db.searchOpinionsBySubjUid(chatId, user.id)
         reply renderRowsAbout(user, rows)
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]]
+        reply pgettext("about", "!unknown-user! $1") % [match.captures["user"]]
       return
 
     # /about [by/del] @user
@@ -196,14 +196,14 @@ proc process(bot: Bot, update: Update) {.async.} =
           let old = bot.db.searchOpinion(chatId, fromUser.id, user.id)
           if old.isSome:
             bot.db.forgetOpinion(chatId, fromUser.id, user.id)
-            reply texts.aboutDeleted
+            reply pgettext("about", "Deleted!")
           else:
             reply "..."
         else:
-          reply texts.aboutCantDelete
+          reply pgettext("about", "!cant-delete!")
         return
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]]
+        reply pgettext("about", "!unknown-user! $1") % [match.captures["user"]]
       return
 
     # /about [rating/latest]
@@ -218,7 +218,7 @@ proc process(bot: Bot, update: Update) {.async.} =
 
     # /about
     if not text.contains(' '):
-      reply texts.aboutHelp % [bot.me.username.unsafeGet]
+      reply pgettext("about", "!help!") % [bot.me.username.unsafeGet]
       return
 
     reply "..."
@@ -227,7 +227,7 @@ proc process(bot: Bot, update: Update) {.async.} =
     # @user -- blabla
     render_entities(text, entities).match(is_re) ?-> match:
       if chatId >= 0:
-        reply texts.aboutCantAdd
+        reply pgettext("about", "!cant-add!")
         return
       getUser(bot, match.captures["user"], fromUser, entities.at 0) ?-> user:
         readonly = false
@@ -235,8 +235,8 @@ proc process(bot: Bot, update: Update) {.async.} =
         bot.db.rememberOpinion(chatId, fromUser.id, user.id,
                                match.captures["text"].cleanEntities)
         if old.isSome:
-          reply texts.aboutUpdated
+          reply pgettext("about", "Updated!")
         else:
-          reply texts.aboutAdded
+          reply pgettext("about", "Added!")
       else:
-        reply texts.aboutUnknownUser % [match.captures["user"]]
+        reply pgettext("about", "!unknown-user! $1") % [match.captures["user"]]

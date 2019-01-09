@@ -2,11 +2,11 @@
 # This is free and unencumbered software released into the public domain.
 
 import ../bot
+import ../cgettext
 import ../db
 import ../sweet_options
 import ../telega/req
 import ../telega/types
-import ../texts
 import ../utils/randomFuto
 import asyncdispatch
 import strutils
@@ -25,7 +25,7 @@ proc process(bot: Bot, update: Update) {.async.} =
         discard lastFutoMessage
         replyTo = message.messageId
       else:
-        msg = texts.aboutUnknownUser % [futoName]
+        msg = pgettext("about", "!unknown-user! $1") % [futoName]
         replyTo = message.messageId
       asyncCheck bot.tg.sendMessage(message.chat.id,
                                     msg,
