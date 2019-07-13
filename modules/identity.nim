@@ -8,6 +8,7 @@ import ../sweet_options
 import ../telega/html
 import ../telega/req
 import ../telega/types
+import ../telega/yoba
 import ./ids
 import asyncdispatch
 import options
@@ -51,4 +52,4 @@ proc process(bot: Bot, update: Update) {.async.} =
         target.fullName.htmlEscape,
         history.fullName.listNames "",
         history.uname.listNames "@"]
-    asyncCheck bot.tg.reply(message, text, parseMode="HTML")
+    asyncCheck bot.tg.reply(message, text, parseMode="HTML").markDeleteable(bot)
