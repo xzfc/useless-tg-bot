@@ -185,7 +185,7 @@ proc selectNext1(db:DbConn, chatId: int, tokens: seq[string],
 
 proc selectNext(db: DbConn, chatId: int, tokens: seq[string],
                 messageIds: seq[int], reverse: bool
-               ): Option[(string, int, seq[string])]
+               ): Option[(string, int, int)]
                   {.tags:[ReadDbEffect,WriteIOEffect].} =
   ## Select random next token.
   ## Requriments are not strict. Loose them if there are no matching candidates:
@@ -207,7 +207,7 @@ proc selectNext(db: DbConn, chatId: int, tokens: seq[string],
           tokensD.join(" "),
           row[0].s
         ]
-        return (row[0].s, row[1].i.int, tokensD).some
+        return (row[0].s, row[1].i.int, tokensD.len).some
 
 proc newMarkov*(dbPath: string): Markov {.tags:[DbEffect].} =
   result.db = open(dbPath, "", "", "")
@@ -228,12 +228,12 @@ proc learn*(m: Markov, chatId: int, messageId: int, line: string,
 
 proc generateInner(m: Markov, chatId: int, start: seq[string], limit: int
                   ): string {.tags:[ReadDbEffect,WriteIOEffect].} =
-  var tokens = start
+  var tokens = start.map(s => s.strip)
   var messageIds: seq[int] = @[]
   result = ""
   for n in 0..limit-1:
     let nextStep = m.db.selectNext(chatId, tokens, messageIds, result.len == 0)
-    nextStep ?-> (next, messageId, initialWords):
+    nextStep ?-> (next, messageId, initialWordsUsed):
       if next == "$end":
         # Try to generate next token again to prevent too short result.
         # The closer we are to ``limit`` the less trying again is likely.
@@ -245,7 +245,7 @@ proc generateInner(m: Markov, chatId: int, start: seq[string], limit: int
       tokens.rankAdd next.strip.toLower
       messageIds.rankAdd messageId
       if result.len == 0:
-        result = initialWords.filter(x => x!="$start").join
+        result = start[0..initialWordsUsed-1].filter(x => x!="$start").join
       result.add next
     else:
       break
@@ -254,10 +254,10 @@ proc generate*(m: Markov, chatId: int, start: string, limit: int
               ): string {.tags:[ReadDbEffect,WriteIOEffect].} =
   ## Generate text using first tokens of ``start`` as an prefix.
   ## If it is not possible, start from random first token.
-  var tokens = map(toSeq(start.tokenize), s => s.toLower.strip)
+  var tokens = map(toSeq(start.tokenize), s => s.toLower)
   if tokens.len > rank:
     tokens = tokens[0..rank-1]
-  debug "From: " & tokens.join(" ")
+  debug "From: " & tokens.map(s => "{" & s & "}").join(" ")
   result = generateInner(m, chatId, tokens, limit)
   if result.len == 0:
     debug "From $start"
